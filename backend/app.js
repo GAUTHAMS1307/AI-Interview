@@ -22,13 +22,27 @@ const reportRoutes      = require("./routes/report");
 const app    = express();
 const server = http.createServer(app);
 
+const normalizeOrigin = (value = "") => {
+  const input = String(value).trim();
+  if (!input) return "";
+
+  try {
+    const url = new URL(input);
+    return `${url.protocol}//${url.host}`.toLowerCase();
+  } catch {
+    return input.replace(/\/+$/, "").toLowerCase();
+  }
+};
+
 const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:3000")
   .split(",")
-  .map((o) => o.trim())
+  .map((o) => normalizeOrigin(o))
   .filter(Boolean);
+const allowedOriginsSet = new Set(allowedOrigins);
 
 const corsOrigin = (origin, callback) => {
-  if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+  if (!origin) return callback(null, true);
+  if (allowedOriginsSet.has(normalizeOrigin(origin))) return callback(null, true);
   return callback(new Error("Not allowed by CORS"));
 };
 
