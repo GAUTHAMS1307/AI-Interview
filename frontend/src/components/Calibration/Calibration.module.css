@@ -39,6 +39,7 @@
   flex: 1; background: #2a2d3e; color: #a0aec0;
   border: 1px solid #3d4166; border-radius: 10px;
   padding: 14px; font-size: 15px; cursor: pointer;
+  margin-top: 10px;
 }
 .btnRow { display: flex; gap: 12px; margin-top: 24px; }
 .btnRow .btn { flex: 1; width: auto; }

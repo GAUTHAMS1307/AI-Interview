@@ -1,7 +1,9 @@
 // src/components/Calibration/CalibrationScreen.jsx
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { startWebcam, stopWebcam, captureFrame, AudioRecorder } from "../../services/mediaService";
+import {
+  startWebcam, stopWebcam, captureFrame, AudioRecorder, attachStreamToVideo, checkCameraAvailable
+} from "../../services/mediaService";
 import { apiSaveBaseline } from "../../services/api";
 import styles from "./Calibration.module.css";
 
@@ -21,6 +23,7 @@ export default function CalibrationScreen() {
   const [audioSegs, setAudioSegs] = useState([]);
   const [error,     setError]     = useState("");
   const [tip,       setTip]       = useState(0);
+  const [checkingDevices, setCheckingDevices] = useState(false);
 
   const TIPS = [
     "Speak naturally about your day or introduce yourself",
@@ -70,6 +73,26 @@ export default function CalibrationScreen() {
     }
   };
 
+  const checkDevices = async () => {
+    setCheckingDevices(true);
+    try {
+      const status = await checkCameraAvailable();
+      if (!status.available) {
+        setError(status.reason || "Camera not found. Please connect/enable your camera and microphone.");
+        return;
+      }
+      if (!status.hasMic) {
+        setError("Camera found, but microphone is missing or disabled. Please enable microphone access.");
+        return;
+      }
+      setError("Camera and microphone detected. Click Start Calibration.");
+    } catch {
+      setError("Unable to verify devices. Please check browser permissions and retry.");
+    } finally {
+      setCheckingDevices(false);
+    }
+  };
+
   const finishCalibration = async () => {
     clearInterval(frameTimerRef.current);
     setPhase("processing");
@@ -101,6 +124,11 @@ export default function CalibrationScreen() {
       stopWebcam(streamRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (phase !== "recording") return;
+    attachStreamToVideo(videoRef.current, streamRef.current);
+  }, [phase]);
 
   const pct = Math.round(((DURATION_SEC - timeLeft) / DURATION_SEC) * 100);
 
@@ -154,6 +182,9 @@ export default function CalibrationScreen() {
         )}
           <button className={styles.btn} onClick={startCalibration}>
             Start 90-Second Calibration
+          </button>
+          <button className={styles.btnSecondary} onClick={checkDevices} disabled={checkingDevices}>
+            {checkingDevices ? "Checking..." : "Check Camera & Mic"}
           </button>
         </div>
       )}

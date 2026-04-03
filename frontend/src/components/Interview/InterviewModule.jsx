@@ -3,7 +3,7 @@ import React, { useRef, useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import {
-  startWebcam, stopWebcam, captureFrame, AudioRecorder
+  startWebcam, stopWebcam, captureFrame, AudioRecorder, attachStreamToVideo, checkCameraAvailable
 } from "../../services/mediaService";
 import {
   apiStartSession, apiSaveQuestion, apiCompleteSession, apiGetBaseline
@@ -43,6 +43,7 @@ export default function InterviewModule() {
 
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [checkingDevices, setCheckingDevices] = useState(false);
 
   // ── Setup phase: start session ──────────────────────────────
   const beginSession = async () => {
@@ -78,6 +79,26 @@ export default function InterviewModule() {
       startQuestion(0, sRes.data.baseline);
     } catch (err) {
       setError(err.response?.data?.message || err.message);
+    }
+  };
+
+  const checkDevices = async () => {
+    setCheckingDevices(true);
+    try {
+      const status = await checkCameraAvailable();
+      if (!status.available) {
+        setError(status.reason || "Camera not found. Please connect/enable your camera.");
+        return;
+      }
+      if (!status.hasMic) {
+        setError("Camera found, but microphone is missing or disabled.");
+        return;
+      }
+      setError("Camera and microphone detected. You can begin interview.");
+    } catch {
+      setError("Unable to verify devices. Please check browser permission settings.");
+    } finally {
+      setCheckingDevices(false);
     }
   };
 
@@ -195,6 +216,11 @@ export default function InterviewModule() {
     };
   }, []);
 
+  useEffect(() => {
+    if (phase !== "question") return;
+    attachStreamToVideo(videoRef.current, streamRef.current);
+  }, [phase, currentQ]);
+
   const progressPct = questions.length
     ? Math.round((currentQ / questions.length) * 100) : 0;
 
@@ -226,6 +252,9 @@ export default function InterviewModule() {
           <video ref={videoRef} className={styles.hiddenVideo} muted autoPlay playsInline />
           <button className={styles.btn} onClick={beginSession}>
             Begin Interview
+          </button>
+          <button className={styles.btnSecondary} onClick={checkDevices} disabled={checkingDevices}>
+            {checkingDevices ? "Checking..." : "Check Camera & Mic"}
           </button>
         </div>
       )}
