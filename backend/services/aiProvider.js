@@ -71,8 +71,9 @@ const resolveDifficultyValue = (difficulty = "mixed", idx = 0) => {
 };
 
 const normalizeDifficulty = (generatedDifficulty, difficultyMode = "mixed", idx = 0) => {
-  if (String(difficultyMode).toLowerCase() !== "mixed") {
-    return resolveDifficultyValue(difficultyMode, idx);
+  const mode = String(difficultyMode || "mixed").toLowerCase();
+  if (mode === "easy" || mode === "medium" || mode === "hard") {
+    return resolveDifficultyValue(mode, idx);
   }
   const parsed = Number(generatedDifficulty);
   if (Number.isFinite(parsed)) return clamp(Math.round(parsed), 1, 3);

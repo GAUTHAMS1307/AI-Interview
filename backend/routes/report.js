@@ -5,10 +5,7 @@ const router  = express.Router();
 const { getReport, getProgressHistory, getLastFiveComparison } =
   require("../controllers/reportController");
 const { protect } = require("../middleware/authMiddleware");
-const parsePositiveInt = (value, fallback) => {
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
-};
+const { parsePositiveInt } = require("../utils/env");
 const reportRateLimiter = rateLimit({
   windowMs: parsePositiveInt(process.env.RATE_LIMIT_WINDOW_MS, 60_000),
   limit: parsePositiveInt(process.env.RATE_LIMIT_MAX_REQUESTS, 60),

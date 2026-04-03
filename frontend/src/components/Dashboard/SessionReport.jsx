@@ -16,6 +16,7 @@ const compareFeatureEnabled =
 const pdfFeatureEnabled =
   String(process.env.REACT_APP_FEATURE_REPORT_PDF || "false").toLowerCase() === "true";
 const reportDateLocale = (process.env.REACT_APP_DATE_LOCALE || "").trim() || undefined;
+const formatReportDate = (dateValue) => new Date(dateValue).toLocaleDateString(reportDateLocale);
 
 export default function SessionReport() {
   const { id }         = useParams();
@@ -96,7 +97,7 @@ export default function SessionReport() {
   };
   const comparisonChart = {
     labels: comparison.map((s) =>
-      `${new Date(s.date).toLocaleDateString(reportDateLocale)} (${s.role || "Unknown"})`
+      `${formatReportDate(s.date)} (${s.role || "Unknown"})`
     ),
     datasets: [{
       label: "CIS (Last 5)",
@@ -123,7 +124,7 @@ export default function SessionReport() {
           <div>
             <h1 className={styles.pageTitle}>Session Report</h1>
             <p className={styles.pageSub}>
-              {new Date(report.completedAt).toLocaleDateString()} ·
+              {formatReportDate(report.completedAt)} ·
               {report.role} · {duration_min} min
             </p>
           </div>
