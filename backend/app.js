@@ -22,13 +22,35 @@ const reportRoutes      = require("./routes/report");
 const app    = express();
 const server = http.createServer(app);
 
+const normalizeOrigin = (value = "") => {
+  const input = String(value).trim();
+  if (!input) return "";
+
+  try {
+    const url = new URL(input);
+    const protocol = url.protocol.toLowerCase();
+    const hostname = url.hostname.toLowerCase();
+    const port = url.port || "";
+    const defaultPort =
+      (protocol === "http:" && port === "80") ||
+      (protocol === "https:" && port === "443");
+    const normalizedPort = !port || defaultPort ? "" : `:${port}`;
+    return `${protocol}//${hostname}${normalizedPort}`;
+  } catch {
+    const fallback = input.replace(/[?#].*$/, "").replace(/\/+$/, "").toLowerCase();
+    return /^https?:\/\/[^/:]+(?::\d+)?$/.test(fallback) ? fallback : "";
+  }
+};
+
 const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:3000")
   .split(",")
-  .map((o) => o.trim())
+  .map((o) => normalizeOrigin(o))
   .filter(Boolean);
+const allowedOriginsSet = new Set(allowedOrigins);
 
 const corsOrigin = (origin, callback) => {
-  if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+  if (!origin) return callback(null, true);
+  if (allowedOriginsSet.has(normalizeOrigin(origin))) return callback(null, true);
   return callback(new Error("Not allowed by CORS"));
 };
 
