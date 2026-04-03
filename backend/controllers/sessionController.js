@@ -9,12 +9,38 @@ const {
 } = require("../services/aiProvider");
 
 const allowedDifficulties = new Set(["easy", "medium", "hard", "mixed"]);
+const STOP_WORDS = new Set([
+  "a", "an", "the", "and", "or", "but", "if", "then", "else", "for", "to", "of", "in", "on", "at",
+  "with", "by", "from", "is", "are", "was", "were", "be", "being", "been", "it", "this", "that",
+  "these", "those", "as", "about", "into", "over", "under", "between", "how", "what", "why", "when",
+  "where", "who", "whom", "which", "do", "does", "did", "can", "could", "should", "would", "your"
+]);
 const clampScore = (value, fallback = 0) => {
   const n = Number(value);
   if (!Number.isFinite(n)) return fallback;
   return Math.min(1, Math.max(0, n));
 };
 const hasMeaningfulTranscript = (value = "") => String(value || "").trim().split(/\s+/).filter(Boolean).length >= 3;
+const tokenizeKeywords = (text = "") =>
+  String(text || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((token) => token.length >= 3 && !STOP_WORDS.has(token));
+
+const computeKeywordOverlap = (questionText = "", transcript = "") => {
+  const questionTokens = tokenizeKeywords(questionText);
+  if (!questionTokens.length) return 0;
+  const answerTokens = new Set(tokenizeKeywords(transcript));
+  if (!answerTokens.size) return 0;
+  const overlap = questionTokens.filter((token) => answerTokens.has(token)).length;
+  return overlap / questionTokens.length;
+};
+
+const looksLikeSkipAnswer = (transcript = "") =>
+  /(?:\bi\s*(?:do\s*not|don't)\s*know\b|\bno\s+idea\b|\bnot\s+sure\b|\bcan(?:not|'t)\s+answer\b|\bskip\b)/i.test(
+    String(transcript || "")
+  );
 
 // ── POST /api/session/start ───────────────────────────────────
 // Creates a new in-progress session and returns session ID + questions
@@ -78,15 +104,34 @@ const saveQuestionScore = async (req, res) => {
       aqs_dev_pct, eye_dev_pct,
       transcript, wpm, filler_count, pause_count,
       GS, RS, FS, DS,
-      dominant_emotion, suggestions,
+      dominant_emotion, suggestions: normalizedSuggestions.slice(0, 5),
       duration_sec
     } = req.body;
 
     const answered = hasMeaningfulTranscript(transcript);
+    const relevanceScore = answered ? clampScore(RS) : 0;
+    const coherenceScore = answered ? clampScore(DS) : 0;
+    const keywordOverlap = answered ? computeKeywordOverlap(questionText, transcript) : 0;
+    const wrongOrOffTopic = answered && (
+      relevanceScore < 0.35 ||
+      (coherenceScore < 0.35 && keywordOverlap < 0.1) ||
+      looksLikeSkipAnswer(transcript)
+    );
+
     const normalizedECS = answered ? clampScore(ECS) : 0;
     const normalizedVSS = answered ? clampScore(VSS) : 0;
-    const normalizedAQS = answered ? clampScore(AQS) : 0;
+    const normalizedAQS = answered
+      ? (wrongOrOffTopic ? Math.min(clampScore(AQS), 0.2) : clampScore(AQS))
+      : 0;
     const normalizedECS2 = answered ? clampScore(ECS2) : 0;
+    const normalizedGS = answered ? clampScore(GS) : 0;
+    const normalizedRS = answered ? (wrongOrOffTopic ? Math.min(relevanceScore, 0.2) : relevanceScore) : 0;
+    const normalizedFS = answered ? clampScore(FS) : 0;
+    const normalizedDS = answered ? (wrongOrOffTopic ? Math.min(coherenceScore, 0.2) : coherenceScore) : 0;
+    const normalizedSuggestions = Array.isArray(suggestions) ? suggestions.filter(Boolean).map(String) : [];
+    if (wrongOrOffTopic) {
+      normalizedSuggestions.unshift("Answer seems off-topic or incorrect. Focus directly on the question asked.");
+    }
 
     // Compute CIS for this question
     const { CIS } = computeCIS({
@@ -108,10 +153,10 @@ const saveQuestionScore = async (req, res) => {
       wpm: answered ? wpm : 0,
       filler_count: answered ? filler_count : 0,
       pause_count: answered ? pause_count : 0,
-      GS: answered ? clampScore(GS) : 0,
-      RS: answered ? clampScore(RS) : 0,
-      FS: answered ? clampScore(FS) : 0,
-      DS: answered ? clampScore(DS) : 0,
+      GS: normalizedGS,
+      RS: normalizedRS,
+      FS: normalizedFS,
+      DS: normalizedDS,
       dominant_emotion, suggestions,
       duration_sec: Number(duration_sec) || 0,
       answeredAt: new Date()
