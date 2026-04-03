@@ -66,9 +66,10 @@ export default function InterviewModule() {
       const payload = { role, count: 6 };
       if (difficultyFeatureEnabled) payload.difficulty = difficulty;
       const sRes = await apiStartSession(payload);
+      const sessionQuestions = Array.isArray(sRes?.data?.questions) ? sRes.data.questions : [];
       setSessionId(sRes.data.sessionId);
-      setQuestions(Array.isArray(sRes.data.questions) ? sRes.data.questions : []);
-      if (!Array.isArray(sRes.data.questions) || sRes.data.questions.length === 0) {
+      setQuestions(sessionQuestions);
+      if (sessionQuestions.length === 0) {
         throw new Error("No questions returned. Please try again.");
       }
 

@@ -5,9 +5,13 @@ const router  = express.Router();
 const { getReport, getProgressHistory, getLastFiveComparison } =
   require("../controllers/reportController");
 const { protect } = require("../middleware/authMiddleware");
+const parsePositiveInt = (value, fallback) => {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
 const reportRateLimiter = rateLimit({
-  windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS || 60_000),
-  limit: Number(process.env.RATE_LIMIT_MAX_REQUESTS || 60),
+  windowMs: parsePositiveInt(process.env.RATE_LIMIT_WINDOW_MS, 60_000),
+  limit: parsePositiveInt(process.env.RATE_LIMIT_MAX_REQUESTS, 60),
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Too many requests. Please try again shortly." }

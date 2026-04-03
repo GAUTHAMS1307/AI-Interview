@@ -15,6 +15,7 @@ const compareFeatureEnabled =
   String(process.env.REACT_APP_FEATURE_REPORT_COMPARE || "false").toLowerCase() === "true";
 const pdfFeatureEnabled =
   String(process.env.REACT_APP_FEATURE_REPORT_PDF || "false").toLowerCase() === "true";
+const reportDateLocale = (process.env.REACT_APP_DATE_LOCALE || "").trim() || undefined;
 
 export default function SessionReport() {
   const { id }         = useParams();
@@ -95,7 +96,7 @@ export default function SessionReport() {
   };
   const comparisonChart = {
     labels: comparison.map((s) =>
-      `${new Date(s.date).toLocaleDateString("en-US")} (${s.role || "Unknown"})`
+      `${new Date(s.date).toLocaleDateString(reportDateLocale)} (${s.role || "Unknown"})`
     ),
     datasets: [{
       label: "CIS (Last 5)",
