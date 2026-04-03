@@ -28,9 +28,17 @@ const normalizeOrigin = (value = "") => {
 
   try {
     const url = new URL(input);
-    return `${url.protocol}//${url.host}`.toLowerCase();
+    const protocol = url.protocol.toLowerCase();
+    const hostname = url.hostname.toLowerCase();
+    const port = url.port || "";
+    const defaultPort =
+      (protocol === "http:" && port === "80") ||
+      (protocol === "https:" && port === "443");
+    const normalizedPort = !port || defaultPort ? "" : `:${port}`;
+    return `${protocol}//${hostname}${normalizedPort}`;
   } catch {
-    return input.replace(/\/+$/, "").toLowerCase();
+    const fallback = input.replace(/\/+$/, "").toLowerCase();
+    return /^https?:\/\/[^/]+$/i.test(fallback) ? fallback : "";
   }
 };
 
