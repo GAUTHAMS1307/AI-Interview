@@ -1,11 +1,17 @@
 // routes/report.js
 const express = require("express");
+const rateLimit = require("express-rate-limit");
 const router  = express.Router();
 const { getReport, getProgressHistory, getLastFiveComparison } =
   require("../controllers/reportController");
 const { protect } = require("../middleware/authMiddleware");
-const { createInMemoryRateLimiter } = require("../middleware/rateLimit");
-const reportRateLimiter = createInMemoryRateLimiter();
+const reportRateLimiter = rateLimit({
+  windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS || 60_000),
+  limit: Number(process.env.RATE_LIMIT_MAX_REQUESTS || 60),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many requests. Please try again shortly." }
+});
 
 // GET /api/report/progress/all  — CIS trend across all sessions
 router.get("/progress/all",     protect, reportRateLimiter, getProgressHistory);

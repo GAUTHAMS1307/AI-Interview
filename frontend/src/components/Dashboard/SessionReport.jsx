@@ -95,7 +95,7 @@ export default function SessionReport() {
   };
   const comparisonChart = {
     labels: comparison.map((s) =>
-      `${new Date(s.date).toLocaleDateString()} (${s.role || "role"})`
+      `${new Date(s.date).toLocaleDateString()} (${s.role || "Unknown"})`
     ),
     datasets: [{
       label: "CIS (Last 5)",

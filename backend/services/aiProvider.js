@@ -70,7 +70,7 @@ const resolveDifficultyValue = (difficulty = "mixed", idx = 0) => {
   return 1 + (idx % 3);
 };
 
-const resolveGeneratedDifficulty = (generatedDifficulty, difficultyMode = "mixed", idx = 0) => {
+const normalizeDifficulty = (generatedDifficulty, difficultyMode = "mixed", idx = 0) => {
   if (String(difficultyMode).toLowerCase() !== "mixed") {
     return resolveDifficultyValue(difficultyMode, idx);
   }
@@ -220,7 +220,7 @@ const generateQuestions = async ({ role = "general", count = 6, difficulty = "mi
         id: String(q.id || `q_${idx + 1}`),
         text: String(q.text || defaultQuestions(role, count, difficulty)[idx]?.text || "Tell me about yourself."),
         category: String(q.category || "behavioral"),
-        difficulty: resolveGeneratedDifficulty(q.difficulty, difficulty, idx)
+        difficulty: normalizeDifficulty(q.difficulty, difficulty, idx)
       }))
     };
   } catch {
