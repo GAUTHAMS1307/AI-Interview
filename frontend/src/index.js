@@ -8,9 +8,7 @@ const normalizeApiBaseUrl = (rawUrl) => {
   const trimmed = (rawUrl || "").trim().replace(/\/+$/, "");
   if (!trimmed) return "";
 
-  return trimmed
-    .replace(/\/api\/health$/i, "")
-    .replace(/\/health$/i, "");
+  return trimmed.replace(/(?:\/api)?\/health$/i, "");
 };
 
 const API_URL = normalizeApiBaseUrl(process.env.REACT_APP_API_URL);
