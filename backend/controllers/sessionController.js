@@ -9,6 +9,12 @@ const {
 } = require("../services/aiProvider");
 
 const allowedDifficulties = new Set(["easy", "medium", "hard", "mixed"]);
+const clampScore = (value, fallback = 0) => {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(1, Math.max(0, n));
+};
+const hasMeaningfulTranscript = (value = "") => String(value || "").trim().split(/\s+/).filter(Boolean).length >= 3;
 
 // ── POST /api/session/start ───────────────────────────────────
 // Creates a new in-progress session and returns session ID + questions
@@ -76,17 +82,38 @@ const saveQuestionScore = async (req, res) => {
       duration_sec
     } = req.body;
 
+    const answered = hasMeaningfulTranscript(transcript);
+    const normalizedECS = answered ? clampScore(ECS) : 0;
+    const normalizedVSS = answered ? clampScore(VSS) : 0;
+    const normalizedAQS = answered ? clampScore(AQS) : 0;
+    const normalizedECS2 = answered ? clampScore(ECS2) : 0;
+
     // Compute CIS for this question
-    const { CIS } = computeCIS({ ECS, VSS, AQS, ECS2 });
+    const { CIS } = computeCIS({
+      ECS: normalizedECS,
+      VSS: normalizedVSS,
+      AQS: normalizedAQS,
+      ECS2: normalizedECS2
+    });
 
     const questionScore = {
       questionId, questionText, category, difficulty,
-      ECS, VSS, AQS, ECS2, CIS,
+      ECS: normalizedECS,
+      VSS: normalizedVSS,
+      AQS: normalizedAQS,
+      ECS2: normalizedECS2,
+      CIS,
       emotion_dev_pct, voice_dev_pct, aqs_dev_pct, eye_dev_pct,
-      transcript, wpm, filler_count, pause_count,
-      GS, RS, FS, DS,
+      transcript: answered ? transcript : "",
+      wpm: answered ? wpm : 0,
+      filler_count: answered ? filler_count : 0,
+      pause_count: answered ? pause_count : 0,
+      GS: answered ? clampScore(GS) : 0,
+      RS: answered ? clampScore(RS) : 0,
+      FS: answered ? clampScore(FS) : 0,
+      DS: answered ? clampScore(DS) : 0,
       dominant_emotion, suggestions,
-      duration_sec,
+      duration_sec: Number(duration_sec) || 0,
       answeredAt: new Date()
     };
 
