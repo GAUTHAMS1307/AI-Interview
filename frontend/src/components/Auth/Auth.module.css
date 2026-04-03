@@ -1,0 +1,80 @@
+/* src/components/Auth/Auth.module.css */
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0f1117 0%, #1a1d2e 100%);
+  padding: 20px;
+}
+.card {
+  background: #1e2130;
+  border: 1px solid #2d3148;
+  border-radius: 16px;
+  padding: 40px 36px;
+  width: 100%;
+  max-width: 420px;
+}
+.logo {
+  font-size: 28px;
+  text-align: center;
+  margin-bottom: 12px;
+}
+.title {
+  font-size: 22px;
+  font-weight: 600;
+  text-align: center;
+  color: #e2e8f0;
+  margin-bottom: 6px;
+}
+.sub {
+  font-size: 13px;
+  color: #718096;
+  text-align: center;
+  margin-bottom: 28px;
+}
+.error {
+  background: #2d1b1b;
+  border: 1px solid #e53e3e;
+  color: #fc8181;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 18px;
+}
+.form { display: flex; flex-direction: column; gap: 16px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 13px; color: #a0aec0; font-weight: 500; }
+.field input {
+  background: #2a2d3e;
+  border: 1px solid #3d4166;
+  border-radius: 8px;
+  padding: 11px 14px;
+  color: #e2e8f0;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.field input:focus { border-color: #4f46e5; }
+.btn {
+  background: #4f46e5;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 13px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: background 0.2s;
+}
+.btn:hover:not(:disabled) { background: #4338ca; }
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.link {
+  text-align: center;
+  font-size: 13px;
+  color: #718096;
+  margin-top: 20px;
+}
+.link a { color: #818cf8; text-decoration: none; }
+.link a:hover { text-decoration: underline; }

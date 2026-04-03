@@ -1,0 +1,17 @@
+# frontend
+frontend/node_modules/
+frontend/.cache/
+frontend/dist/
+
+# backend
+__pycache__/
+*.pyc
+
+# models
+ml-models/
+*.zip
+*.mdl
+*.fst
+
+# misc
+.DS_Store

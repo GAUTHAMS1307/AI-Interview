@@ -1,0 +1,136 @@
+/* src/components/Calibration/Calibration.module.css */
+.page {
+  min-height: 100vh;
+  background: #0f1117;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.card {
+  background: #1e2130;
+  border: 1px solid #2d3148;
+  border-radius: 20px;
+  padding: 48px 40px;
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+}
+.card h1 { font-size: 24px; color: #e2e8f0; margin-bottom: 12px; }
+.card h2 { font-size: 20px; color: #e2e8f0; margin: 16px 0 10px; }
+.icon, .successIcon { font-size: 48px; margin-bottom: 16px; }
+.desc { color: #a0aec0; font-size: 14px; line-height: 1.7; margin-bottom: 24px; }
+.checklist { text-align: left; margin-bottom: 28px; display: flex; flex-direction: column; gap: 10px; }
+.checkItem { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #cbd5e0; }
+.checkMark { color: #48bb78; font-weight: 700; }
+.error {
+  background: #2d1b1b; border: 1px solid #e53e3e;
+  color: #fc8181; padding: 10px 14px;
+  border-radius: 8px; font-size: 13px; margin-bottom: 16px;
+}
+.btn {
+  width: 100%; background: #4f46e5; color: #fff;
+  border: none; border-radius: 10px; padding: 14px;
+  font-size: 15px; font-weight: 600; cursor: pointer;
+  transition: background 0.2s;
+}
+.btn:hover { background: #4338ca; }
+.btnSecondary {
+  flex: 1; background: #2a2d3e; color: #a0aec0;
+  border: 1px solid #3d4166; border-radius: 10px;
+  padding: 14px; font-size: 15px; cursor: pointer;
+}
+.btnRow { display: flex; gap: 12px; margin-top: 24px; }
+.btnRow .btn { flex: 1; width: auto; }
+
+/* Recording layout */
+.recordingLayout {
+  display: flex;
+  gap: 28px;
+  align-items: flex-start;
+  max-width: 900px;
+  width: 100%;
+}
+.videoWrapper {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 2px solid #4f46e5;
+  flex: 0 0 480px;
+}
+.video { width: 480px; height: 360px; object-fit: cover; display: block; }
+.recDot {
+  position: absolute; top: 14px; left: 14px;
+  width: 12px; height: 12px; background: #e53e3e;
+  border-radius: 50%; animation: pulse 1.2s infinite;
+}
+.recLabel {
+  position: absolute; top: 10px; left: 34px;
+  color: #e53e3e; font-size: 12px; font-weight: 700;
+  letter-spacing: 1px;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.sidebar {
+  flex: 1;
+  background: #1e2130;
+  border: 1px solid #2d3148;
+  border-radius: 16px;
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+.sidebar h2 { font-size: 18px; color: #e2e8f0; text-align: center; }
+
+/* Timer ring */
+.timerRing { position: relative; }
+.timerText {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+.timerSec { display: block; font-size: 28px; font-weight: 700; color: #e2e8f0; }
+.timerLabel { font-size: 11px; color: #718096; }
+
+.tip {
+  background: #2a2d3e; border-radius: 10px;
+  padding: 12px 16px; font-size: 13px; color: #a0aec0;
+  text-align: center; line-height: 1.5; width: 100%;
+}
+
+.capturing { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+.capItem {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px; color: #718096;
+  background: #2a2d3e; padding: 8px 12px; border-radius: 8px;
+}
+.frameCount { font-size: 12px; color: #4a5568; }
+
+/* Processing */
+.spinner {
+  width: 48px; height: 48px; margin: 0 auto 20px;
+  border: 3px solid #2d3148;
+  border-top-color: #4f46e5;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.processingSteps { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
+.stepRow {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 13px; color: #718096;
+}
+.stepDot {
+  width: 8px; height: 8px; background: #4f46e5;
+  border-radius: 50%; animation: pulse 1.5s infinite;
+}
+
+/* Done */
+.baselineSummary { margin: 20px 0; display: flex; flex-direction: column; gap: 10px; }
+.bItem {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 14px; color: #68d391;
+  background: #1a2e22; padding: 10px 14px; border-radius: 8px;
+}
