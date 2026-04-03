@@ -6,6 +6,7 @@ const OPENAI_MODEL_VISION = process.env.OPENAI_MODEL_VISION || OPENAI_MODEL_TEXT
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
 const OPENAI_TIMEOUT_MS = Number(process.env.OPENAI_TIMEOUT_MS || 45000);
 const OPENAI_TEMPERATURE = Number(process.env.OPENAI_TEMPERATURE || 0.2);
+const MIN_USABLE_AUDIO_BASE64_LENGTH = 256;
 
 const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
 const round = (n, d = 3) => Number(Number(n || 0).toFixed(d));
@@ -14,7 +15,7 @@ const hasUsableAudioInput = (audio) => {
   const raw = String(audio || "").trim();
   if (!raw) return false;
   const base64Payload = raw.includes(",") ? raw.split(",").pop() : raw;
-  return base64Payload.replace(/\s/g, "").length >= 256;
+  return base64Payload.replace(/\s/g, "").length >= MIN_USABLE_AUDIO_BASE64_LENGTH;
 };
 
 const extractJsonObject = (raw) => {
