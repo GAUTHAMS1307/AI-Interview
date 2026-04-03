@@ -22,6 +22,7 @@ export default function CalibrationScreen() {
   const [frames,    setFrames]    = useState([]);
   const [audioSegs, setAudioSegs] = useState([]);
   const [error,     setError]     = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
   const [tip,       setTip]       = useState(0);
   const [checkingDevices, setCheckingDevices] = useState(false);
 
@@ -44,6 +45,7 @@ export default function CalibrationScreen() {
   const startCalibration = async () => {
     try {
       setError("");
+      setStatusMessage("");
 
       // Check if browser supports camera at all
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -75,17 +77,19 @@ export default function CalibrationScreen() {
 
   const checkDevices = async () => {
     setCheckingDevices(true);
+    setStatusMessage("");
     try {
       const status = await checkCameraAvailable();
       if (!status.available) {
-        setError(status.reason || "Camera not found. Please connect/enable your camera and microphone.");
+        setError(status.reason || "Camera not found. Please connect/enable your camera.");
         return;
       }
       if (!status.hasMic) {
         setError("Camera found, but microphone is missing or disabled. Please enable microphone access.");
         return;
       }
-      setError("Camera and microphone detected. Click Start Calibration.");
+      setError("");
+      setStatusMessage("Camera and microphone detected. Click Start Calibration.");
     } catch {
       setError("Unable to verify devices. Please check browser permissions and retry.");
     } finally {
@@ -180,6 +184,7 @@ export default function CalibrationScreen() {
             </div>
           </div>
         )}
+        {statusMessage && <div className={styles.success}>{statusMessage}</div>}
           <button className={styles.btn} onClick={startCalibration}>
             Start 90-Second Calibration
           </button>

@@ -42,6 +42,7 @@ export default function InterviewModule() {
   const scoresRef = useRef({ ECS:[], VSS:[], ECS2:[], emotion_dev:[], voice_dev:[], eye_dev:[] });
 
   const [error, setError] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [checkingDevices, setCheckingDevices] = useState(false);
 
@@ -49,6 +50,7 @@ export default function InterviewModule() {
   const beginSession = async () => {
     try {
       setError("");
+      setStatusMessage("");
       // Get baseline
       const bRes = await apiGetBaseline();
       setBaseline(bRes.data.baseline);
@@ -84,6 +86,7 @@ export default function InterviewModule() {
 
   const checkDevices = async () => {
     setCheckingDevices(true);
+    setStatusMessage("");
     try {
       const status = await checkCameraAvailable();
       if (!status.available) {
@@ -94,7 +97,8 @@ export default function InterviewModule() {
         setError("Camera found, but microphone is missing or disabled.");
         return;
       }
-      setError("Camera and microphone detected. You can begin interview.");
+      setError("");
+      setStatusMessage("Camera and microphone detected. You can begin the interview.");
     } catch {
       setError("Unable to verify devices. Please check browser permission settings.");
     } finally {
@@ -233,6 +237,7 @@ export default function InterviewModule() {
           <h1>🎤 Interview Session</h1>
           <p>Select your target role and start the interview.</p>
           {error && <div className={styles.error}>{error}</div>}
+          {statusMessage && <div className={styles.success}>{statusMessage}</div>}
           <div className={styles.field}>
             <label>Target Role</label>
             <select value={role} onChange={e => setRole(e.target.value)}>
