@@ -22,11 +22,22 @@ const extractJsonObject = (raw) => {
   }
 };
 
+const isHttpsUrl = (value = "") => {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+};
+
+const OPENAI_BASE_URL_IS_HTTPS = isHttpsUrl(OPENAI_BASE_URL);
+
 const openAIEnabled = () => Boolean(OPENAI_API_KEY.trim());
 
 const openAIChatJson = async ({ messages, model = OPENAI_MODEL_TEXT, temperature = OPENAI_TEMPERATURE }) => {
   if (!openAIEnabled()) throw new Error("OPENAI_API_KEY is not configured");
-  if (!isHttpsUrl(OPENAI_BASE_URL)) {
+  if (!OPENAI_BASE_URL_IS_HTTPS) {
     throw new Error("OPENAI_BASE_URL must be HTTPS");
   }
   const { data } = await axios.post(
@@ -95,9 +106,9 @@ const defaultQuestions = (role = "general", count = 6) => {
   }));
 };
 
-const suggestFromScores = (aqs = 0.5, wpm = 130, fillerCount = 0, pauseCount = 0) => {
+const suggestFromScores = (AQS = 0.5, wpm = 130, fillerCount = 0, pauseCount = 0) => {
   const tips = [];
-  if (aqs < 0.55) tips.push("Use a clearer structure (Situation, Action, Result) in your answer.");
+  if (AQS < 0.55) tips.push("Use a clearer structure (Situation, Action, Result) in your answer.");
   if (wpm > 170) tips.push("Slow your speaking pace slightly to improve clarity.");
   if (wpm < 95) tips.push("Increase your pace a little to sound more confident.");
   if (fillerCount > 6) tips.push("Reduce filler words by pausing briefly before key points.");
@@ -123,22 +134,12 @@ const avgNumbers = (values = [], fallback = 0) => {
   return nums.reduce((a, b) => a + b, 0) / nums.length;
 };
 
-const isHttpsUrl = (value = "") => {
-  try {
-    const parsed = new URL(value);
-    return parsed.protocol === "https:";
-  } catch {
-    return false;
-  }
-};
-
-const audioPromptSummary = (audio) => {
+const audioMetadataSummary = (audio) => {
   const raw = String(audio || "");
   if (!raw) return "Audio: empty";
-  const len = raw.length;
-  const head = raw.slice(0, 1800);
-  const tail = raw.slice(-1200);
-  return [`Audio(base64) length=${len}`, "Head sample:", head, "Tail sample:", tail].join("\n");
+  const head = raw.slice(0, 200);
+  const tail = raw.slice(-200);
+  return [`Audio(base64) length=${raw.length}`, "Snippet head:", head, "Snippet tail:", tail].join("\n");
 };
 
 const settledSuccessful = (results = []) =>
@@ -222,7 +223,7 @@ const analyzeNlpAnswer = async ({ audio, question, baseline_stt }) => {
                 ? [
                     {
                       type: "text",
-                      text: audioPromptSummary(audio)
+                      text: audioMetadataSummary(audio)
                     }
                   ]
                 : [])
@@ -358,7 +359,7 @@ const analyzeVoiceChunk = async ({ audio, baseline }) => {
         },
         {
           role: "user",
-          content: `Baseline voice metrics: ${JSON.stringify(baseline || {})}\n${audioPromptSummary(audio)}`
+          content: `Baseline voice metrics: ${JSON.stringify(baseline || {})}\n${audioMetadataSummary(audio)}`
         }
       ]
     });
@@ -443,9 +444,16 @@ const calibrateStt = async ({ audio_segments = [] }) => {
   );
   const results = settledSuccessful(settled);
   const baselineWpm = Number(avgNumbers(results.map((r) => r.wpm), 130));
+  const fillerCounts = results.map((r) => Number(r.filler_count || 0)).filter((n) => Number.isFinite(n));
+  const totalFillerCount = fillerCounts.reduce((sum, n) => sum + n, 0);
+  const transcripts = results.map((r) => String(r.transcript || "").trim()).filter(Boolean);
+  const totalWords = transcripts.reduce((sum, text) => sum + text.split(/\s+/).filter(Boolean).length, 0);
+  const fillerRate = totalWords > 0
+    ? round(clamp((totalFillerCount / totalWords) * 100, 0, 100), 2)
+    : 5;
   return {
     baseline_wpm: baselineWpm,
-    baseline_filler_rate: Number(avgNumbers(results.map((r) => r.filler_count), 0)),
+    baseline_filler_rate: fillerRate,
     baseline_pause_count: Number(avgNumbers(results.map((r) => r.pause_count), 2)),
     baseline_speech_ratio: 0.85,
     segments_processed: audio_segments.length
