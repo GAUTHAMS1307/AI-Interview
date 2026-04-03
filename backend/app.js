@@ -11,6 +11,7 @@ const socketio   = require("socket.io");
 require("dotenv").config();
 
 const connectDB  = require("./config/db");
+const { analyzeEmotionFrame, analyzeVoiceChunk } = require("./services/aiProvider");
 
 // ── Route imports ────────────────────────────────────────────
 const authRoutes        = require("./routes/auth");
@@ -68,17 +69,13 @@ io.on("connection", (socket) => {
   // Frontend sends webcam frame → forward to ML server
   socket.on("frame", async (data) => {
     try {
-      const axios = require("axios");
-      const ML_URL = process.env.ML_SERVER_URL || "http://localhost:5001";
-
-      // Send frame + baseline to Python Flask ML server
-      const response = await axios.post(`${ML_URL}/api/ml/emotion`, {
-        frame:        data.frame,        // base64 JPEG
-        baseline_ecs: data.baseline_ecs  // from user's calibration
+      const response = await analyzeEmotionFrame({
+        frame: data.frame,
+        baseline_ecs: data.baseline_ecs
       });
 
       // Emit results back to this client only
-      socket.emit("emotion_result", response.data);
+      socket.emit("emotion_result", response);
     } catch (err) {
       socket.emit("ml_error", { error: err.message });
     }
@@ -87,15 +84,12 @@ io.on("connection", (socket) => {
   // Audio chunk streaming
   socket.on("audio_chunk", async (data) => {
     try {
-      const axios = require("axios");
-      const ML_URL = process.env.ML_SERVER_URL || "http://localhost:5001";
-
-      const response = await axios.post(`${ML_URL}/api/ml/voice`, {
-        audio:    data.audio,     // base64 WAV buffer
-        baseline: data.baseline   // user's voice baseline
+      const response = await analyzeVoiceChunk({
+        audio: data.audio,
+        baseline: data.baseline
       });
 
-      socket.emit("voice_result", response.data);
+      socket.emit("voice_result", response);
     } catch (err) {
       socket.emit("ml_error", { error: err.message });
     }
@@ -110,7 +104,7 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, () => {
   console.log(`[Server] Running on http://localhost:${PORT}`);
-  console.log(`[ML]     Flask ML server expected at ${process.env.ML_SERVER_URL || "http://localhost:5001"}`);
+  console.log(`[AI]     Provider mode: ${process.env.OPENAI_API_KEY ? "OpenAI API enabled" : "fallback (no OPENAI_API_KEY)"}`);
 });
 
 module.exports = app;

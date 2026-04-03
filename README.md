@@ -158,13 +158,12 @@ This produces alerts when any component deviates more than 35% from baseline —
 └──────┬─────────────────────────────────┬────────────────┘
        │ Mongoose                        │ Axios HTTP
 ┌──────▼──────┐                ┌─────────▼────────────────┐
-│   MongoDB   │                │   Flask ML Server        │
-│  (port 27017)│               │   Python (port 5001)     │
+│   MongoDB   │                │   External AI API         │
+│  (port 27017)│               │   (OpenAI-compatible)    │
 │  Users      │                │                          │
-│  Baselines  │                │  Emotion CNN (TF)        │
-│  Sessions   │                │  Voice LSTM (PyTorch)    │
-└─────────────┘                │  NLP (Vosk + spaCy)      │
-                               │  Eye Tracking (MediaPipe)│
+│  Baselines  │                │  Question generation      │
+│  Sessions   │                │  NLP + scoring            │
+└─────────────┘                │  Vision-based signals     │
                                └──────────────────────────┘
 ```
 
@@ -371,7 +370,9 @@ python -m spacy download en_core_web_sm
 ```env
 PORT=4000
 FRONTEND_URL=http://localhost:3000
-ML_SERVER_URL=http://localhost:5001
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_MODEL_TEXT=gpt-4o-mini
+OPENAI_MODEL_VISION=gpt-4o-mini
 MONGO_URI=mongodb://localhost:27017/pmcis
 JWT_SECRET=your_secret_key_change_this
 JWT_EXPIRES_IN=7d
@@ -379,15 +380,15 @@ JWT_EXPIRES_IN=7d
 
 **Frontend** — edit `frontend/.env`:
 ```env
-REACT_APP_BACKEND_URL=http://localhost:4000
-REACT_APP_ML_URL=http://localhost:5001
+REACT_APP_API_URL=http://localhost:4000
+REACT_APP_SOCKET_URL=http://localhost:4000
 ```
 
 ---
 
 ## 🚀 Running the Project
 
-Open **4 separate terminal windows** and run one command in each:
+Open **3 separate terminal windows** and run one command in each:
 
 ### Terminal 1 — MongoDB
 ```bash
@@ -395,21 +396,14 @@ mongod
 # ✅ Expected: "waiting for connections on port 27017"
 ```
 
-### Terminal 2 — Flask ML Server
-```bash
-cd pmcis/ml-models
-python api_server.py
-# ✅ Expected: "PMCIS — Flask ML Server  http://localhost:5001"
-```
-
-### Terminal 3 — Node.js Backend
+### Terminal 2 — Node.js Backend
 ```bash
 cd pmcis/backend
 node app.js
 # ✅ Expected: "[Server] Running on http://localhost:4000"
 ```
 
-### Terminal 4 — React Frontend
+### Terminal 3 — React Frontend
 ```bash
 cd pmcis/frontend
 npm start
@@ -419,10 +413,6 @@ npm start
 ### Verify All Services
 
 ```bash
-# Test ML server
-curl http://localhost:5001/api/ml/health
-# → {"status":"ok","server":"PMCIS ML Flask API"}
-
 # Test backend
 curl http://localhost:4000/api/health
 # → {"status":"ok","timestamp":"..."}
@@ -449,14 +439,16 @@ curl http://localhost:4000/api/health
   - `MONGO_URI=<your-mongodb-uri>`
   - `JWT_SECRET=<strong-secret>`
   - `JWT_EXPIRES_IN=7d`
-  - `ML_SERVER_URL=<your-ml-server-url>`
+  - `OPENAI_API_KEY=<your-openai-api-key>`
+  - `OPENAI_MODEL_TEXT=gpt-4o-mini`
+  - `OPENAI_MODEL_VISION=gpt-4o-mini`
   - `FRONTEND_URL=https://<your-vercel-app>.vercel.app`
     - For multiple domains, use comma-separated values
     - Example: `FRONTEND_URL=https://app.vercel.app,https://www.app.com`
 
 ### Notes
 - Frontend now uses `REACT_APP_API_URL` for REST calls and `REACT_APP_SOCKET_URL` for Socket.io.
-- Frontend no longer calls ML server directly; interview NLP/eye analysis is proxied by backend via `/api/session/analyze`.
+- Frontend does not call AI providers directly; interview analysis is proxied by backend via `/api/session/analyze` and Socket.io events.
 - `frontend/vercel.json` enables SPA routing on Vercel.
 
 ---
