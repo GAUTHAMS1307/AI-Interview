@@ -8,6 +8,8 @@
 .setupCard p  { color:#718096; font-size:14px; margin-bottom:24px; }
 .error { background:#2d1b1b; border:1px solid #e53e3e; color:#fc8181;
   padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:16px; }
+.success { background:#1a2e22; border:1px solid #48bb78; color:#68d391;
+  padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:16px; }
 .field { text-align:left; margin-bottom:20px; }
 .field label { display:block; font-size:13px; color:#a0aec0; margin-bottom:6px; }
 .field select {

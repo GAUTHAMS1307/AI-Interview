@@ -1,7 +1,9 @@
 // src/components/Calibration/CalibrationScreen.jsx
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { startWebcam, stopWebcam, captureFrame, AudioRecorder } from "../../services/mediaService";
+import {
+  startWebcam, stopWebcam, captureFrame, AudioRecorder, attachStreamToVideo, checkCameraAvailable
+} from "../../services/mediaService";
 import { apiSaveBaseline } from "../../services/api";
 import styles from "./Calibration.module.css";
 
@@ -20,7 +22,9 @@ export default function CalibrationScreen() {
   const [frames,    setFrames]    = useState([]);
   const [audioSegs, setAudioSegs] = useState([]);
   const [error,     setError]     = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
   const [tip,       setTip]       = useState(0);
+  const [checkingDevices, setCheckingDevices] = useState(false);
 
   const TIPS = [
     "Speak naturally about your day or introduce yourself",
@@ -41,6 +45,7 @@ export default function CalibrationScreen() {
   const startCalibration = async () => {
     try {
       setError("");
+      setStatusMessage("");
 
       // Check if browser supports camera at all
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -67,6 +72,28 @@ export default function CalibrationScreen() {
       }, 1000);
     } catch (err) {
       setError("Camera/microphone access denied. Please allow permissions.");
+    }
+  };
+
+  const checkDevices = async () => {
+    setCheckingDevices(true);
+    setStatusMessage("");
+    try {
+      const status = await checkCameraAvailable();
+      if (!status.available) {
+        setError(status.reason || "Camera not found. Please connect/enable your camera.");
+        return;
+      }
+      if (!status.hasMic) {
+        setError("Camera found, but microphone is missing or disabled. Please enable microphone access.");
+        return;
+      }
+      setError("");
+      setStatusMessage("Camera and microphone detected. Click Start Calibration.");
+    } catch {
+      setError("Unable to verify devices. Please check browser permissions and retry.");
+    } finally {
+      setCheckingDevices(false);
     }
   };
 
@@ -101,6 +128,11 @@ export default function CalibrationScreen() {
       stopWebcam(streamRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (phase !== "recording") return;
+    attachStreamToVideo(videoRef.current, streamRef.current);
+  }, [phase]);
 
   const pct = Math.round(((DURATION_SEC - timeLeft) / DURATION_SEC) * 100);
 
@@ -152,8 +184,12 @@ export default function CalibrationScreen() {
             </div>
           </div>
         )}
+        {statusMessage && <div className={styles.success}>{statusMessage}</div>}
           <button className={styles.btn} onClick={startCalibration}>
             Start 90-Second Calibration
+          </button>
+          <button className={styles.btnSecondary} onClick={checkDevices} disabled={checkingDevices}>
+            {checkingDevices ? "Checking..." : "Check Camera & Mic"}
           </button>
         </div>
       )}

@@ -3,7 +3,7 @@ import React, { useRef, useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import {
-  startWebcam, stopWebcam, captureFrame, AudioRecorder
+  startWebcam, stopWebcam, captureFrame, AudioRecorder, attachStreamToVideo, checkCameraAvailable
 } from "../../services/mediaService";
 import {
   apiStartSession, apiSaveQuestion, apiCompleteSession, apiGetBaseline
@@ -42,12 +42,15 @@ export default function InterviewModule() {
   const scoresRef = useRef({ ECS:[], VSS:[], ECS2:[], emotion_dev:[], voice_dev:[], eye_dev:[] });
 
   const [error, setError] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const [checkingDevices, setCheckingDevices] = useState(false);
 
   // ── Setup phase: start session ──────────────────────────────
   const beginSession = async () => {
     try {
       setError("");
+      setStatusMessage("");
       // Get baseline
       const bRes = await apiGetBaseline();
       setBaseline(bRes.data.baseline);
@@ -78,6 +81,28 @@ export default function InterviewModule() {
       startQuestion(0, sRes.data.baseline);
     } catch (err) {
       setError(err.response?.data?.message || err.message);
+    }
+  };
+
+  const checkDevices = async () => {
+    setCheckingDevices(true);
+    setStatusMessage("");
+    try {
+      const status = await checkCameraAvailable();
+      if (!status.available) {
+        setError(status.reason || "Camera not found. Please connect/enable your camera.");
+        return;
+      }
+      if (!status.hasMic) {
+        setError("Camera found, but microphone is missing or disabled.");
+        return;
+      }
+      setError("");
+      setStatusMessage("Camera and microphone detected. You can begin the interview.");
+    } catch {
+      setError("Unable to verify devices. Please check browser permission settings.");
+    } finally {
+      setCheckingDevices(false);
     }
   };
 
@@ -195,6 +220,11 @@ export default function InterviewModule() {
     };
   }, []);
 
+  useEffect(() => {
+    if (phase !== "question") return;
+    attachStreamToVideo(videoRef.current, streamRef.current);
+  }, [phase, currentQ]);
+
   const progressPct = questions.length
     ? Math.round((currentQ / questions.length) * 100) : 0;
 
@@ -207,6 +237,7 @@ export default function InterviewModule() {
           <h1>🎤 Interview Session</h1>
           <p>Select your target role and start the interview.</p>
           {error && <div className={styles.error}>{error}</div>}
+          {statusMessage && <div className={styles.success}>{statusMessage}</div>}
           <div className={styles.field}>
             <label>Target Role</label>
             <select value={role} onChange={e => setRole(e.target.value)}>
@@ -226,6 +257,9 @@ export default function InterviewModule() {
           <video ref={videoRef} className={styles.hiddenVideo} muted autoPlay playsInline />
           <button className={styles.btn} onClick={beginSession}>
             Begin Interview
+          </button>
+          <button className={styles.btnSecondary} onClick={checkDevices} disabled={checkingDevices}>
+            {checkingDevices ? "Checking..." : "Check Camera & Mic"}
           </button>
         </div>
       )}

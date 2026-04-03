@@ -14,6 +14,16 @@ export const captureFrame = (videoEl) => {
 
 // ── Start webcam stream ───────────────────────────────────────
 // Tries multiple constraint levels — falls back to simplest if needed
+export const attachStreamToVideo = async (videoEl, stream) => {
+  if (!videoEl || !stream) return;
+  videoEl.srcObject = stream;
+  try {
+    await videoEl.play();
+  } catch (playErr) {
+    console.warn("[mediaService] videoEl.play() failed:", playErr.message);
+  }
+};
+
 export const startWebcam = async (videoEl) => {
 
   // List of constraints to try in order (most specific → most permissive)
@@ -66,15 +76,7 @@ export const startWebcam = async (videoEl) => {
     throw new Error("Could not access camera: " + (lastError?.message || "Unknown error"));
   }
 
-  videoEl.srcObject = stream;
-
-  // Play with error handling
-  try {
-    await videoEl.play();
-  } catch (playErr) {
-    console.warn("[mediaService] videoEl.play() failed:", playErr.message);
-    // Not fatal — stream is still active
-  }
+  await attachStreamToVideo(videoEl, stream);
 
   return stream;
 };
