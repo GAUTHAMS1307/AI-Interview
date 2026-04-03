@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import styles from "./Auth.module.css";
+import ThemeToggle from "../Common/ThemeToggle";
 
 export default function Login() {
   const { login }   = useAuth();
@@ -26,7 +27,16 @@ export default function Login() {
 
   return (
     <div className={styles.page}>
+      <div className={styles.themeToggleWrap}>
+        <ThemeToggle />
+      </div>
       <div className={styles.card}>
+        <div className={styles.flashCard}>
+          <div className={styles.flashTitle}>⚡ Flash Card</div>
+          <div className={styles.flashBody}>
+            Tip: Use the STAR method (Situation, Task, Action, Result) for clear and high-scoring interview answers.
+          </div>
+        </div>
         <div className={styles.logo}>🎯 PMCIS</div>
         <h1 className={styles.title}>Welcome back</h1>
         <p className={styles.sub}>Sign in to your interview trainer</p>

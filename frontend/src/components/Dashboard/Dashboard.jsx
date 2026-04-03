@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import ThemeToggle from "../Common/ThemeToggle";
 import { apiGetSessions, apiGetProgress, apiGetBaseline } from "../../services/api";
 import {
   Chart as ChartJS, CategoryScale, LinearScale, PointElement,
@@ -116,6 +117,7 @@ export default function Dashboard() {
       <nav className={styles.nav}>
         <div className={styles.navBrand}>🎯 PMCIS</div>
         <div className={styles.navLinks}>
+          <ThemeToggle />
           <button onClick={() => navigate("/calibration")}>Recalibrate</button>
           <button className={styles.navPrimary}
             onClick={() => navigate("/interview")}>

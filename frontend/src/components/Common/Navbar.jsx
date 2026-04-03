@@ -2,6 +2,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import ThemeToggle from "./ThemeToggle";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -29,6 +30,7 @@ export default function Navbar() {
 
       {/* Links */}
       <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+        <ThemeToggle />
         <NavBtn onClick={() => navigate("/dashboard")}>Dashboard</NavBtn>
         <NavBtn onClick={() => navigate("/calibration")}>Recalibrate</NavBtn>
         <NavBtn

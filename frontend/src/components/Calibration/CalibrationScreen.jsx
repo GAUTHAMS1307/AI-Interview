@@ -6,6 +6,7 @@ import {
 } from "../../services/mediaService";
 import { apiSaveBaseline } from "../../services/api";
 import styles from "./Calibration.module.css";
+import ThemeToggle from "../Common/ThemeToggle";
 
 const DURATION_SEC  = 90;
 const FRAME_INTERVAL = 2000;   // capture frame every 2 seconds
@@ -138,6 +139,9 @@ export default function CalibrationScreen() {
 
   return (
     <div className={styles.page}>
+      <div style={{ position: "absolute", top: 20, right: 20 }}>
+        <ThemeToggle />
+      </div>
       {/* ── INTRO ── */}
       {phase === "intro" && (
         <div className={styles.card}>
