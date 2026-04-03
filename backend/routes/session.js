@@ -6,7 +6,8 @@ const {
   saveQuestionScore,
   completeSession,
   getSessions,
-  getSessionById
+  getSessionById,
+  analyzeAnswer
 } = require("../controllers/sessionController");
 const { protect } = require("../middleware/authMiddleware");
 
@@ -18,6 +19,9 @@ router.post("/:id/question",          protect, saveQuestionScore);
 
 // PUT  /api/session/:id/complete        — finalize session + compute CIS
 router.put("/:id/complete",           protect, completeSession);
+
+// POST /api/session/analyze             — proxy NLP + eye analysis
+router.post("/analyze",                protect, analyzeAnswer);
 
 // GET  /api/session/all                 — list all sessions for user
 router.get("/all",                    protect, getSessions);

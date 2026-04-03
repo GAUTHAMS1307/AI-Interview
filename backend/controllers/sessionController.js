@@ -176,7 +176,33 @@ const getSessionById = async (req, res) => {
   }
 };
 
+// ── POST /api/session/analyze ───────────────────────────────────
+// Proxies NLP + Eye calls to ML server so frontend only talks to backend
+const analyzeAnswer = async (req, res) => {
+  try {
+    const { audio, frame, question, baseline_stt, baseline_gaze } = req.body;
+    const [nlpRes, eyeRes] = await Promise.all([
+      axios.post(`${ML_URL()}/api/ml/nlp`, {
+        audio,
+        question,
+        baseline_stt
+      }),
+      axios.post(`${ML_URL()}/api/ml/eye`, {
+        frame,
+        baseline_gaze
+      })
+    ]);
+
+    res.json({
+      nlp: nlpRes.data,
+      eye: eyeRes.data
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 module.exports = {
   startSession, saveQuestionScore, completeSession,
-  getSessions,  getSessionById
+  getSessions,  getSessionById, analyzeAnswer
 };

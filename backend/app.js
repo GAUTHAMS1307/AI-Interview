@@ -21,10 +21,20 @@ const reportRoutes      = require("./routes/report");
 const app    = express();
 const server = http.createServer(app);
 
+const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:3000")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+const corsOrigin = (origin, callback) => {
+  if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+  return callback(new Error("Not allowed by CORS"));
+};
+
 // ── Socket.io setup (real-time frame streaming) ──────────────
 const io = socketio(server, {
-  cors: { origin: process.env.FRONTEND_URL || "http://localhost:3000",
-          methods: ["GET", "POST"] }
+  cors: { origin: corsOrigin,
+           methods: ["GET", "POST"] }
 });
 
 // Attach io to app so controllers can access it
@@ -32,7 +42,7 @@ app.set("io", io);
 
 // ── Middleware ────────────────────────────────────────────────
 app.use(helmet());
-app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:3000" }));
+app.use(cors({ origin: corsOrigin, credentials: true }));
 app.use(express.json({ limit: "50mb" }));   // large for base64 frames
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(morgan("dev"));
