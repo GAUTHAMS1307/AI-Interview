@@ -37,8 +37,8 @@ const normalizeOrigin = (value = "") => {
     const normalizedPort = !port || defaultPort ? "" : `:${port}`;
     return `${protocol}//${hostname}${normalizedPort}`;
   } catch {
-    const fallback = input.replace(/\/+$/, "").toLowerCase();
-    return /^https?:\/\/[^/]+$/i.test(fallback) ? fallback : "";
+    const fallback = input.replace(/[?#].*$/, "").replace(/\/+$/, "").toLowerCase();
+    return /^https?:\/\/[^/:]+(?::\d+)?$/.test(fallback) ? fallback : "";
   }
 };
 
