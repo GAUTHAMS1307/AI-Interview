@@ -1,5 +1,6 @@
 // controllers/reportController.js
 const Session = require("../models/Session");
+const compareFeatureEnabled = String(process.env.FEATURE_REPORT_COMPARE || "false").toLowerCase() === "true";
 
 // ── GET /api/report/:sessionId ────────────────────────────────
 // Full structured report for dashboard display
@@ -99,4 +100,41 @@ const getProgressHistory = async (req, res) => {
   }
 };
 
-module.exports = { getReport, getProgressHistory };
+// ── GET /api/report/compare/last5 ───────────────────────────────
+// Last 5 completed sessions for quick comparison chart
+const getLastFiveComparison = async (req, res) => {
+  try {
+    if (!compareFeatureEnabled) {
+      return res.status(404).json({ message: "Comparison feature is disabled" });
+    }
+
+    const sessions = await Session.find({
+      userId: req.user._id,
+      status: "completed"
+    })
+      .select("scores startedAt duration_min role")
+      .sort({ startedAt: -1 })
+      .limit(5);
+
+    const comparison = sessions
+      .reverse()
+      .map((s, idx) => ({
+        session_num: idx + 1,
+        session_id: s._id,
+        date: s.startedAt,
+        role: s.role,
+        CIS: s.scores?.CIS_overall || 0,
+        ECS: s.scores?.ECS_avg || 0,
+        VSS: s.scores?.VSS_avg || 0,
+        AQS: s.scores?.AQS_avg || 0,
+        ECS2: s.scores?.ECS2_avg || 0,
+        duration_min: s.duration_min || 0
+      }));
+
+    res.json({ comparison, total_sessions: comparison.length });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+module.exports = { getReport, getProgressHistory, getLastFiveComparison };

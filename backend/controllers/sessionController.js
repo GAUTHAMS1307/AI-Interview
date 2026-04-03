@@ -8,11 +8,16 @@ const {
   analyzeEyeFrame
 } = require("../services/aiProvider");
 
+const allowedDifficulties = new Set(["easy", "medium", "hard", "mixed"]);
+
 // ── POST /api/session/start ───────────────────────────────────
 // Creates a new in-progress session and returns session ID + questions
 const startSession = async (req, res) => {
   try {
-    const { role = "general", count = 8 } = req.body;
+    const { role = "general", count = 8, difficulty = "mixed" } = req.body;
+    const rawDifficulty = String(difficulty || "mixed").toLowerCase();
+    const difficultyMode = allowedDifficulties.has(rawDifficulty) ? rawDifficulty : "mixed";
+    const questionCount = Math.min(12, Math.max(1, Number(count) || 8));
 
     // Verify user has a baseline — block interview if not calibrated
     const baseline = await Baseline.findOne({ userId: req.user._id });
@@ -24,7 +29,11 @@ const startSession = async (req, res) => {
     }
 
     // Fetch AI-generated interview questions
-    const qRes = await generateQuestions({ role, count });
+    const qRes = await generateQuestions({ role, count: questionCount, difficulty: difficultyMode });
+    const questions = Array.isArray(qRes?.questions) ? qRes.questions : [];
+    if (!questions.length) {
+      return res.status(502).json({ message: "Unable to generate interview questions. Please retry." });
+    }
 
     // Create session document
     const session = await Session.create({
@@ -36,7 +45,8 @@ const startSession = async (req, res) => {
 
     res.status(201).json({
       sessionId: session._id,
-      questions: qRes.data.questions,
+      questions,
+      difficulty: difficultyMode,
       baseline: {
         emotion_ECS: baseline.emotion.baseline_ECS,
         voice:       baseline.voice,

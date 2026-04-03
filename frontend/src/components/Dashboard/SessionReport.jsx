@@ -1,7 +1,7 @@
 // src/components/Dashboard/SessionReport.jsx
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { apiGetReport } from "../../services/api";
+import { apiGetReport, apiGetLastFiveComparison } from "../../services/api";
 import {
   Chart as ChartJS, CategoryScale, LinearScale, BarElement,
   PointElement, LineElement, Tooltip, Legend
@@ -11,19 +11,41 @@ import styles from "./Dashboard.module.css";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement,
   PointElement, LineElement, Tooltip, Legend);
+const compareFeatureEnabled =
+  String(process.env.REACT_APP_FEATURE_REPORT_COMPARE || "false").toLowerCase() === "true";
+const pdfFeatureEnabled =
+  String(process.env.REACT_APP_FEATURE_REPORT_PDF || "false").toLowerCase() === "true";
+const reportDateLocale = (process.env.REACT_APP_DATE_LOCALE || "").trim() || undefined;
+const formatReportDate = (dateValue) => new Date(dateValue).toLocaleDateString(reportDateLocale);
 
 export default function SessionReport() {
   const { id }         = useParams();
   const navigate       = useNavigate();
   const [report, setReport] = useState(null);
+  const [comparison, setComparison] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab]  = useState("overview");  // overview | questions | deviation
 
   useEffect(() => {
-    apiGetReport(id)
-      .then(res => setReport(res.data))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    (async () => {
+      try {
+        const reportRes = await apiGetReport(id);
+        setReport(reportRes.data);
+      } catch (err) {
+        console.error("[SessionReport] report fetch failed:", err?.message || err);
+      }
+
+      if (compareFeatureEnabled) {
+        try {
+          const comparisonRes = await apiGetLastFiveComparison();
+          setComparison(comparisonRes?.data?.comparison || []);
+        } catch (err) {
+          console.error("[SessionReport] comparison fetch failed:", err?.message || err);
+        }
+      }
+
+      setLoading(false);
+    })();
   }, [id]);
 
   if (loading) return <div className={styles.loading}>Loading report...</div>;
@@ -73,6 +95,20 @@ export default function SessionReport() {
       y: { min:0, max:100, ticks:{ color:"#718096" }, grid:{ color:"#2d3148" } }
     }
   };
+  const comparisonChart = {
+    labels: comparison.map((s) =>
+      `${formatReportDate(s.date)} (${s.role || "Unknown"})`
+    ),
+    datasets: [{
+      label: "CIS (Last 5)",
+      data: comparison.map((s) => Math.round((s.CIS || 0) * 100)),
+      borderColor: "#4f46e5",
+      backgroundColor: "rgba(79,70,229,0.12)",
+      tension: 0.35,
+      fill: true,
+      pointRadius: 4
+    }]
+  };
 
   return (
     <div className={styles.page}>
@@ -88,16 +124,23 @@ export default function SessionReport() {
           <div>
             <h1 className={styles.pageTitle}>Session Report</h1>
             <p className={styles.pageSub}>
-              {new Date(report.completedAt).toLocaleDateString()} ·
+              {formatReportDate(report.completedAt)} ·
               {report.role} · {duration_min} min
             </p>
           </div>
-          <div className={styles.bigCIS}>
-            <div className={styles.bigScore}>
-              {Math.round(scores.CIS_overall * 100)}
+          <div className={styles.headerRight}>
+            {pdfFeatureEnabled && (
+              <button className={styles.printBtn} onClick={() => window.print()}>
+                Download PDF
+              </button>
+            )}
+            <div className={styles.bigCIS}>
+              <div className={styles.bigScore}>
+                {Math.round(scores.CIS_overall * 100)}
+              </div>
+              <div className={styles.bigGrade}>{getGrade(scores.CIS_overall)}</div>
+              <div className={styles.bigLabel}>CIS Score</div>
             </div>
-            <div className={styles.bigGrade}>{getGrade(scores.CIS_overall)}</div>
-            <div className={styles.bigLabel}>CIS Score</div>
           </div>
         </div>
 
@@ -150,6 +193,14 @@ export default function SessionReport() {
                     <span className={styles.sugNum}>{i+1}</span> {s}
                   </div>
                 ))}
+              </div>
+            )}
+            {compareFeatureEnabled && comparison.length > 0 && (
+              <div className={styles.chartCard}>
+                <h3>Last 5 Session Comparison</h3>
+                <div className={styles.chartArea} style={{ height:220 }}>
+                  <Line data={comparisonChart} options={chartOpts} />
+                </div>
               </div>
             )}
           </>

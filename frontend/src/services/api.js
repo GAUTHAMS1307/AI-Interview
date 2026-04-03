@@ -21,3 +21,4 @@ export const apiGetSession     = (id) => axios.get(`${BASE}/session/${id}`);
 // ── Reports ───────────────────────────────────────────────────
 export const apiGetReport   = (id) => axios.get(`${BASE}/report/${id}`);
 export const apiGetProgress = ()   => axios.get(`${BASE}/report/progress/all`);
+export const apiGetLastFiveComparison = () => axios.get(`${BASE}/report/compare/last5`);

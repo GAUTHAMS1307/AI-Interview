@@ -13,6 +13,8 @@ import styles from "./Interview.module.css";
 const FRAME_RATE_MS   = 1500;   // emit frame every 1.5s during interview
 const ANSWER_TIME_SEC = 120;    // 2 min max per question
 const SOCKET_URL = (process.env.REACT_APP_SOCKET_URL || "").trim();
+const difficultyFeatureEnabled =
+  String(process.env.REACT_APP_FEATURE_DIFFICULTY || "false").toLowerCase() === "true";
 
 export default function InterviewModule() {
   const navigate      = useNavigate();
@@ -29,6 +31,7 @@ export default function InterviewModule() {
   const [currentQ,    setCurrentQ]    = useState(0);
   const [baseline,    setBaseline]    = useState(null);
   const [role,        setRole]        = useState("software_engineer");
+  const [difficulty,  setDifficulty]  = useState("mixed");
 
   // Live scores (updated by socket events)
   const [liveEmotion, setLiveEmotion] = useState(null);
@@ -60,9 +63,15 @@ export default function InterviewModule() {
       streamRef.current = stream;
 
       // Start session on backend
-      const sRes = await apiStartSession({ role, count: 6 });
+      const payload = { role, count: 6 };
+      if (difficultyFeatureEnabled) payload.difficulty = difficulty;
+      const sRes = await apiStartSession(payload);
+      const sessionQuestions = Array.isArray(sRes?.data?.questions) ? sRes.data.questions : [];
       setSessionId(sRes.data.sessionId);
-      setQuestions(sRes.data.questions);
+      setQuestions(sessionQuestions);
+      if (sessionQuestions.length === 0) {
+        throw new Error("No questions returned. Please try again.");
+      }
 
       // Connect socket.io
       socketRef.current = SOCKET_URL ? io(SOCKET_URL) : io();
@@ -247,6 +256,17 @@ export default function InterviewModule() {
               <option value="general">General</option>
             </select>
           </div>
+          {difficultyFeatureEnabled && (
+            <div className={styles.field}>
+              <label>Difficulty</label>
+              <select value={difficulty} onChange={e => setDifficulty(e.target.value)}>
+                <option value="mixed">Mixed</option>
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+              </select>
+            </div>
+          )}
           <div className={styles.infoBox}>
             <div>📹 Webcam + microphone will be used</div>
             <div>❓ 6 questions · ~12 minutes</div>
