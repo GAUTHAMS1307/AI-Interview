@@ -14,12 +14,12 @@ const reportRateLimiter = rateLimit({
 });
 
 // GET /api/report/progress/all  — CIS trend across all sessions
-router.get("/progress/all",     protect, reportRateLimiter, getProgressHistory);
+router.get("/progress/all",     reportRateLimiter, protect, getProgressHistory);
 
 // GET /api/report/compare/last5 — last 5 completed sessions
-router.get("/compare/last5",    protect, reportRateLimiter, getLastFiveComparison);
+router.get("/compare/last5",    reportRateLimiter, protect, getLastFiveComparison);
 
 // GET /api/report/:sessionId    — full report for one session detail
-router.get("/:sessionId",       protect, reportRateLimiter, getReport);
+router.get("/:sessionId",       reportRateLimiter, protect, getReport);
 
 module.exports = router;
