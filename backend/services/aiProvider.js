@@ -4,6 +4,8 @@ const OPENAI_BASE_URL = (process.env.OPENAI_BASE_URL || "https://api.openai.com/
 const OPENAI_MODEL_TEXT = process.env.OPENAI_MODEL_TEXT || "gpt-4o-mini";
 const OPENAI_MODEL_VISION = process.env.OPENAI_MODEL_VISION || OPENAI_MODEL_TEXT;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
+const OPENAI_TIMEOUT_MS = Number(process.env.OPENAI_TIMEOUT_MS || 45000);
+const OPENAI_TEMPERATURE = Number(process.env.OPENAI_TEMPERATURE || 0.2);
 
 const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
 const round = (n, d = 3) => Number(Number(n || 0).toFixed(d));
@@ -22,13 +24,16 @@ const extractJsonObject = (raw) => {
 
 const openAIEnabled = () => Boolean(OPENAI_API_KEY.trim());
 
-const openAIChatJson = async ({ messages, model = OPENAI_MODEL_TEXT }) => {
+const openAIChatJson = async ({ messages, model = OPENAI_MODEL_TEXT, temperature = OPENAI_TEMPERATURE }) => {
   if (!openAIEnabled()) throw new Error("OPENAI_API_KEY is not configured");
+  if (!isHttpsUrl(OPENAI_BASE_URL)) {
+    throw new Error("OPENAI_BASE_URL must be HTTPS");
+  }
   const { data } = await axios.post(
     `${OPENAI_BASE_URL}/chat/completions`,
     {
       model,
-      temperature: 0.2,
+      temperature,
       messages
     },
     {
@@ -36,7 +41,7 @@ const openAIChatJson = async ({ messages, model = OPENAI_MODEL_TEXT }) => {
         Authorization: `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json"
       },
-      timeout: 30000
+      timeout: OPENAI_TIMEOUT_MS
     }
   );
 
@@ -101,10 +106,51 @@ const suggestFromScores = (aqs = 0.5, wpm = 130, fillerCount = 0, pauseCount = 0
   return tips.slice(0, 3);
 };
 
+const pickSample = (arr = [], maxItems = 3) => {
+  if (!Array.isArray(arr) || arr.length === 0) return [];
+  if (arr.length <= maxItems) return arr;
+  const step = Math.max(1, Math.floor(arr.length / maxItems));
+  const sampled = [];
+  for (let i = 0; i < arr.length && sampled.length < maxItems; i += step) {
+    sampled.push(arr[i]);
+  }
+  return sampled;
+};
+
+const avgNumbers = (values = [], fallback = 0) => {
+  const nums = values.map(Number).filter((n) => Number.isFinite(n));
+  if (!nums.length) return fallback;
+  return nums.reduce((a, b) => a + b, 0) / nums.length;
+};
+
+const isHttpsUrl = (value = "") => {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+};
+
+const audioPromptSummary = (audio) => {
+  const raw = String(audio || "");
+  if (!raw) return "Audio: empty";
+  const len = raw.length;
+  const head = raw.slice(0, 1800);
+  const tail = raw.slice(-1200);
+  return [`Audio(base64) length=${len}`, "Head sample:", head, "Tail sample:", tail].join("\n");
+};
+
+const settledSuccessful = (results = []) =>
+  results
+    .filter((r) => r.status === "fulfilled" && r.value)
+    .map((r) => r.value);
+
 const generateQuestions = async ({ role = "general", count = 6 }) => {
   try {
     const json = await openAIChatJson({
       model: OPENAI_MODEL_TEXT,
+      temperature: 0.5,
       messages: [
         {
           role: "system",
@@ -134,8 +180,11 @@ const generateQuestions = async ({ role = "general", count = 6 }) => {
 
 const analyzeNlpAnswer = async ({ audio, question, baseline_stt }) => {
   const baseWpm = Number(baseline_stt?.baseline_wpm || 130);
+  const keyConfigured = openAIEnabled();
   const fallback = {
-    transcript: "Audio analysis unavailable. Please ensure AI API key is configured.",
+    transcript: keyConfigured
+      ? "Audio analysis unavailable due to provider error. Using fallback scoring."
+      : "Audio analysis unavailable. Please ensure AI API key is configured.",
     wpm: baseWpm,
     filler_count: 0,
     pause_count: 0,
@@ -145,7 +194,9 @@ const analyzeNlpAnswer = async ({ audio, question, baseline_stt }) => {
     DS: 0.6,
     AQS: 0.62,
     deviation_pct: 0,
-    suggestions: ["Configure OPENAI_API_KEY to enable detailed NLP scoring."]
+    suggestions: keyConfigured
+      ? ["AI provider was temporarily unavailable; retry the analysis."]
+      : ["Configure OPENAI_API_KEY to enable detailed NLP scoring."]
   };
 
   try {
@@ -168,13 +219,13 @@ const analyzeNlpAnswer = async ({ audio, question, baseline_stt }) => {
           content: [
             { type: "text", text: prompt },
             ...(audio
-              ? [
-                  {
-                    type: "text",
-                    text: `Audio (base64, truncated): ${String(audio).slice(0, 12000)}`
-                  }
-                ]
-              : [])
+                ? [
+                    {
+                      type: "text",
+                      text: audioPromptSummary(audio)
+                    }
+                  ]
+                : [])
           ]
         }
       ]
@@ -285,6 +336,7 @@ const analyzeEyeFrame = async ({ frame, baseline_gaze = 0.75 }) => {
 
 const analyzeVoiceChunk = async ({ audio, baseline }) => {
   const baseVss = Number(baseline?.baseline_VSS || 0.65);
+  const keyConfigured = openAIEnabled();
   const basePitch = Number(baseline?.baseline_pitch || 150);
   const fallback = {
     VSS: round(baseVss),
@@ -306,7 +358,7 @@ const analyzeVoiceChunk = async ({ audio, baseline }) => {
         },
         {
           role: "user",
-          content: `Baseline voice metrics: ${JSON.stringify(baseline || {})}. Audio(base64 truncated): ${String(audio || "").slice(0, 12000)}`
+          content: `Baseline voice metrics: ${JSON.stringify(baseline || {})}\n${audioPromptSummary(audio)}`
         }
       ]
     });
@@ -320,62 +372,81 @@ const analyzeVoiceChunk = async ({ audio, baseline }) => {
       deviation_pct: round(clamp(Math.abs((VSS - baseVss) * 100), 0, 100), 1)
     };
   } catch {
-    return fallback;
+    return {
+      ...fallback,
+      note: keyConfigured ? "voice_fallback_provider_error" : "voice_fallback_missing_api_key"
+    };
   }
 };
 
 const calibrateEmotion = async ({ frames = [] }) => {
-  const sample = frames[0];
-  const emotion = await analyzeEmotionFrame({ frame: sample, baseline_ecs: 0.7 });
+  const samples = pickSample(frames, 3);
+  const settled = await Promise.allSettled(
+    samples.map((frame) => analyzeEmotionFrame({ frame, baseline_ecs: 0.7 }))
+  );
+  const results = settledSuccessful(settled);
+  const ecsAvg = avgNumbers(results.map((r) => r.ECS), 0.7);
+  const dominant = results.find((r) => r.face_found)?.emotion || "Neutral";
   return {
-    baseline_ECS: round(clamp(Number(emotion.ECS || 0.7), 0.4, 0.95)),
+    baseline_ECS: round(clamp(Number(ecsAvg || 0.7), 0.4, 0.95)),
     baseline_probs: {
       Neutral: 0.55,
       Happy: 0.25,
       Calm: 0.15
     },
-    baseline_dominant: emotion.emotion || "Neutral",
+    baseline_dominant: dominant,
     frames_processed: frames.length
   };
 };
 
 const calibrateVoice = async ({ audio_segments = [] }) => {
-  const first = audio_segments[0];
-  const voice = await analyzeVoiceChunk({ audio: first, baseline: {} });
+  const samples = pickSample(audio_segments, 3);
+  const settled = await Promise.allSettled(
+    samples.map((audio) => analyzeVoiceChunk({ audio, baseline: {} }))
+  );
+  const results = settledSuccessful(settled);
   return {
-    baseline_VSS: round(clamp(Number(voice.VSS || 0.65), 0.35, 0.95)),
-    baseline_pitch: Number(voice.pitch || 150),
+    baseline_VSS: round(clamp(avgNumbers(results.map((r) => r.VSS), 0.65), 0.35, 0.95)),
+    baseline_pitch: Number(avgNumbers(results.map((r) => r.pitch), 150)),
     baseline_pitch_std: 20,
-    baseline_energy: Number(voice.energy || 0.05),
-    baseline_wpm: Number(voice.wpm || 130),
-    baseline_pause_rate: Number(voice.pause_rate || 0.3),
+    baseline_energy: Number(avgNumbers(results.map((r) => r.energy), 0.05)),
+    baseline_wpm: Number(avgNumbers(results.map((r) => r.wpm), 130)),
+    baseline_pause_rate: Number(avgNumbers(results.map((r) => r.pause_rate), 0.3)),
     baseline_mfcc_means: [],
     segments_processed: audio_segments.length
   };
 };
 
 const calibrateEye = async ({ frames = [] }) => {
-  const sample = frames[0];
-  const eye = await analyzeEyeFrame({ frame: sample, baseline_gaze: 0.75 });
+  const samples = pickSample(frames, 3);
+  const settled = await Promise.allSettled(
+    samples.map((frame) => analyzeEyeFrame({ frame, baseline_gaze: 0.75 }))
+  );
+  const results = settledSuccessful(settled);
   return {
-    baseline_gaze_ratio: round(clamp(Number(eye.gaze_ratio || 0.75), 0.3, 0.95)),
+    baseline_gaze_ratio: round(clamp(avgNumbers(results.map((r) => r.gaze_ratio), 0.75), 0.3, 0.95)),
     baseline_blink_rate: 15,
     frames_processed: frames.length
   };
 };
 
 const calibrateStt = async ({ audio_segments = [] }) => {
-  const first = audio_segments[0];
-  const nlp = await analyzeNlpAnswer({
-    audio: first,
-    question: "Calibration speech sample",
-    baseline_stt: { baseline_wpm: 130 }
-  });
-  const baselineWpm = Number(nlp.wpm || 130);
+  const samples = pickSample(audio_segments, 3);
+  const settled = await Promise.allSettled(
+    samples.map((audio) =>
+      analyzeNlpAnswer({
+        audio,
+        question: "Calibration speech sample",
+        baseline_stt: { baseline_wpm: 130 }
+      })
+    )
+  );
+  const results = settledSuccessful(settled);
+  const baselineWpm = Number(avgNumbers(results.map((r) => r.wpm), 130));
   return {
     baseline_wpm: baselineWpm,
-    baseline_filler_rate: Number(nlp.filler_count || 0),
-    baseline_pause_count: Number(nlp.pause_count || 2),
+    baseline_filler_rate: Number(avgNumbers(results.map((r) => r.filler_count), 0)),
+    baseline_pause_count: Number(avgNumbers(results.map((r) => r.pause_count), 2)),
     baseline_speech_ratio: 0.85,
     segments_processed: audio_segments.length
   };

@@ -373,6 +373,8 @@ FRONTEND_URL=http://localhost:3000
 OPENAI_API_KEY=your_openai_api_key
 OPENAI_MODEL_TEXT=gpt-4o-mini
 OPENAI_MODEL_VISION=gpt-4o-mini
+OPENAI_TIMEOUT_MS=45000
+OPENAI_TEMPERATURE=0.2
 MONGO_URI=mongodb://localhost:27017/pmcis
 JWT_SECRET=your_secret_key_change_this
 JWT_EXPIRES_IN=7d
@@ -442,6 +444,8 @@ curl http://localhost:4000/api/health
   - `OPENAI_API_KEY=<your-openai-api-key>`
   - `OPENAI_MODEL_TEXT=gpt-4o-mini`
   - `OPENAI_MODEL_VISION=gpt-4o-mini`
+  - `OPENAI_TIMEOUT_MS=45000`
+  - `OPENAI_TEMPERATURE=0.2`
   - `FRONTEND_URL=https://<your-vercel-app>.vercel.app`
     - For multiple domains, use comma-separated values
     - Example: `FRONTEND_URL=https://app.vercel.app,https://www.app.com`
