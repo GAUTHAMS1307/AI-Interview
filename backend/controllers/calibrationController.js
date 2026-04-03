@@ -1,8 +1,11 @@
 // controllers/calibrationController.js
-const axios    = require("axios");
 const Baseline = require("../models/Baseline");
-
-const ML_URL = () => process.env.ML_SERVER_URL || "http://localhost:5001";
+const {
+  calibrateEmotion,
+  calibrateVoice,
+  calibrateEye,
+  calibrateStt
+} = require("../services/aiProvider");
 
 // ── POST /api/calibration/save ────────────────────────────────
 // Called after 90-second calibration session.
@@ -17,12 +20,12 @@ const saveBaseline = async (req, res) => {
     if (!frames || !audio_segments)
       return res.status(400).json({ message: "frames and audio_segments required" });
 
-    // ── Call Flask ML server to compute all baselines ─────────
+    // ── Call AI provider to compute all baselines ──────────────
     const [emotionRes, voiceRes, eyeRes, sttRes] = await Promise.all([
-      axios.post(`${ML_URL()}/api/ml/calibrate/emotion`, { frames }),
-      axios.post(`${ML_URL()}/api/ml/calibrate/voice`,   { audio_segments }),
-      axios.post(`${ML_URL()}/api/ml/calibrate/eye`,     { frames }),
-      axios.post(`${ML_URL()}/api/ml/calibrate/stt`,     { audio_segments })
+      calibrateEmotion({ frames }),
+      calibrateVoice({ audio_segments }),
+      calibrateEye({ frames }),
+      calibrateStt({ audio_segments })
     ]);
 
     // ── Save / update baseline in MongoDB ─────────────────────
@@ -30,10 +33,10 @@ const saveBaseline = async (req, res) => {
       { userId },
       {
         userId,
-        emotion: emotionRes.data,
-        voice:   voiceRes.data,
-        eye:     eyeRes.data,
-        stt:     sttRes.data,
+        emotion: emotionRes,
+        voice:   voiceRes,
+        eye:     eyeRes,
+        stt:     sttRes,
         calibratedAt: new Date()
       },
       { upsert: true, new: true }

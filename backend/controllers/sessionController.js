@@ -1,10 +1,12 @@
 // controllers/sessionController.js
-const axios    = require("axios");
 const Session  = require("../models/Session");
 const Baseline = require("../models/Baseline");
 const { computeCIS, computeSessionCIS } = require("../utils/cisCalculator");
-
-const ML_URL = () => process.env.ML_SERVER_URL || "http://localhost:5001";
+const {
+  generateQuestions,
+  analyzeNlpAnswer,
+  analyzeEyeFrame
+} = require("../services/aiProvider");
 
 // ── POST /api/session/start ───────────────────────────────────
 // Creates a new in-progress session and returns session ID + questions
@@ -21,10 +23,8 @@ const startSession = async (req, res) => {
       });
     }
 
-    // Fetch questions from ML server question bank
-    const qRes = await axios.get(`${ML_URL()}/api/ml/questions`, {
-      params: { role, count }
-    });
+    // Fetch AI-generated interview questions
+    const qRes = await generateQuestions({ role, count });
 
     // Create session document
     const session = await Session.create({
@@ -177,25 +177,18 @@ const getSessionById = async (req, res) => {
 };
 
 // ── POST /api/session/analyze ───────────────────────────────────
-// Proxies NLP + Eye calls to ML server so frontend only talks to backend
+// Proxies NLP + Eye calls to AI provider so frontend only talks to backend
 const analyzeAnswer = async (req, res) => {
   try {
     const { audio, frame, question, baseline_stt, baseline_gaze } = req.body;
     const [nlpRes, eyeRes] = await Promise.all([
-      axios.post(`${ML_URL()}/api/ml/nlp`, {
-        audio,
-        question,
-        baseline_stt
-      }),
-      axios.post(`${ML_URL()}/api/ml/eye`, {
-        frame,
-        baseline_gaze
-      })
+      analyzeNlpAnswer({ audio, question, baseline_stt }),
+      analyzeEyeFrame({ frame, baseline_gaze })
     ]);
 
     res.json({
-      nlp: nlpRes.data,
-      eye: eyeRes.data
+      nlp: nlpRes,
+      eye: eyeRes
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
