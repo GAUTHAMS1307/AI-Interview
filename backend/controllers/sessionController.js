@@ -31,6 +31,9 @@ const startSession = async (req, res) => {
     // Fetch AI-generated interview questions
     const qRes = await generateQuestions({ role, count: questionCount, difficulty: difficultyMode });
     const questions = Array.isArray(qRes?.questions) ? qRes.questions : [];
+    if (!questions.length) {
+      return res.status(502).json({ message: "Unable to generate interview questions. Please retry." });
+    }
 
     // Create session document
     const session = await Session.create({

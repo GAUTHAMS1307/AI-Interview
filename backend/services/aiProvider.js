@@ -70,6 +70,15 @@ const resolveDifficultyValue = (difficulty = "mixed", idx = 0) => {
   return 1 + (idx % 3);
 };
 
+const resolveGeneratedDifficulty = (generatedDifficulty, difficultyMode = "mixed", idx = 0) => {
+  if (String(difficultyMode).toLowerCase() !== "mixed") {
+    return resolveDifficultyValue(difficultyMode, idx);
+  }
+  const parsed = Number(generatedDifficulty);
+  if (Number.isFinite(parsed)) return clamp(Math.round(parsed), 1, 3);
+  return resolveDifficultyValue("mixed", idx);
+};
+
 const defaultQuestions = (role = "general", count = 6, difficulty = "mixed") => {
   const bank = {
     frontend: [
@@ -211,7 +220,7 @@ const generateQuestions = async ({ role = "general", count = 6, difficulty = "mi
         id: String(q.id || `q_${idx + 1}`),
         text: String(q.text || defaultQuestions(role, count, difficulty)[idx]?.text || "Tell me about yourself."),
         category: String(q.category || "behavioral"),
-        difficulty: resolveDifficultyValue(difficulty, idx)
+        difficulty: resolveGeneratedDifficulty(q.difficulty, difficulty, idx)
       }))
     };
   } catch {

@@ -29,13 +29,17 @@ export default function SessionReport() {
       try {
         const reportRes = await apiGetReport(id);
         setReport(reportRes.data);
-      } catch {}
+      } catch (err) {
+        console.error("[SessionReport] report fetch failed:", err?.message || err);
+      }
 
       if (compareFeatureEnabled) {
         try {
           const comparisonRes = await apiGetLastFiveComparison();
           setComparison(comparisonRes?.data?.comparison || []);
-        } catch {}
+        } catch (err) {
+          console.error("[SessionReport] comparison fetch failed:", err?.message || err);
+        }
       }
 
       setLoading(false);
