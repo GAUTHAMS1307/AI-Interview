@@ -76,6 +76,11 @@ export const startWebcam = async (videoEl) => {
     throw new Error("Could not access camera: " + (lastError?.message || "Unknown error"));
   }
 
+  if (stream.getAudioTracks().length === 0) {
+    stopWebcam(stream);
+    throw new Error("Microphone is required for interview voice scoring. Please enable microphone access.");
+  }
+
   await attachStreamToVideo(videoEl, stream);
 
   return stream;
@@ -108,7 +113,7 @@ export class AudioRecorder {
     this.chunks = [];
   }
 
-  async start(stream) {
+  async start(stream, onChunk) {
     this.chunks = [];
 
     // Use audio-only track from the shared stream
@@ -140,7 +145,16 @@ export class AudioRecorder {
     }
 
     this.mediaRecorder.ondataavailable = (e) => {
-      if (e.data && e.data.size > 0) this.chunks.push(e.data);
+      if (e.data && e.data.size > 0) {
+        this.chunks.push(e.data);
+        if (typeof onChunk === "function") {
+          blobToBase64(e.data)
+            .then((b64) => onChunk(b64))
+            .catch((err) => {
+              console.warn("[AudioRecorder] Failed to convert audio chunk:", err?.message || err);
+            });
+        }
+      }
     };
 
     this.mediaRecorder.start(100);   // collect in 100ms chunks

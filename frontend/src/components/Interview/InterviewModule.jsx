@@ -9,6 +9,7 @@ import {
   apiStartSession, apiSaveQuestion, apiCompleteSession, apiGetBaseline
 } from "../../services/api";
 import styles from "./Interview.module.css";
+import ThemeToggle from "../Common/ThemeToggle";
 
 const FRAME_RATE_MS   = 1500;   // emit frame every 1.5s during interview
 const ANSWER_TIME_SEC = 120;    // 2 min max per question
@@ -48,6 +49,7 @@ export default function InterviewModule() {
   const [statusMessage, setStatusMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [checkingDevices, setCheckingDevices] = useState(false);
+  const submitLockRef = useRef(false);
 
   // ── Setup phase: start session ──────────────────────────────
   const beginSession = async () => {
@@ -67,8 +69,10 @@ export default function InterviewModule() {
       if (difficultyFeatureEnabled) payload.difficulty = difficulty;
       const sRes = await apiStartSession(payload);
       const sessionQuestions = Array.isArray(sRes?.data?.questions) ? sRes.data.questions : [];
+      const baselineData = bRes?.data?.baseline || sRes?.data?.baseline || null;
       setSessionId(sRes.data.sessionId);
       setQuestions(sessionQuestions);
+      setBaseline(baselineData);
       if (sessionQuestions.length === 0) {
         throw new Error("No questions returned. Please try again.");
       }
@@ -87,7 +91,7 @@ export default function InterviewModule() {
       });
 
       setPhase("question");
-      startQuestion(0, sRes.data.baseline);
+      startQuestion(0, baselineData);
     } catch (err) {
       setError(err.response?.data?.message || err.message);
     }
@@ -122,7 +126,13 @@ export default function InterviewModule() {
     setTimeLeft(ANSWER_TIME_SEC);
 
     // Record audio for this answer
-    recorderRef.current.start(streamRef.current);
+    recorderRef.current.start(streamRef.current, (audioChunkB64) => {
+      if (!audioChunkB64 || !socketRef.current) return;
+      socketRef.current.emit("audio_chunk", {
+        audio: audioChunkB64,
+        baseline: bl?.voice || {}
+      });
+    });
 
     // Frame capture + socket emit loop
     frameTimerRef.current = setInterval(() => {
@@ -146,6 +156,8 @@ export default function InterviewModule() {
 
   // ── Submit current answer ────────────────────────────────────
   const submitAnswer = useCallback(async () => {
+    if (submitLockRef.current) return;
+    submitLockRef.current = true;
     clearInterval(frameTimerRef.current);
     clearInterval(timerRef.current);
     setPhase("processing");
@@ -204,6 +216,7 @@ export default function InterviewModule() {
       setPhase("question");
     } finally {
       setSaving(false);
+      submitLockRef.current = false;
     }
   }, [currentQ, questions, sessionId, baseline, liveEmotion, timeLeft, startQuestion]);
 
@@ -239,6 +252,9 @@ export default function InterviewModule() {
 
   return (
     <div className={styles.page}>
+      <div className={styles.themeToggleWrap}>
+        <ThemeToggle />
+      </div>
 
       {/* ── SETUP ── */}
       {phase === "setup" && (

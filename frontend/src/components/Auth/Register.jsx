@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import styles from "./Auth.module.css";
+import ThemeToggle from "../Common/ThemeToggle";
 
 export default function Register() {
   const { register } = useAuth();
@@ -26,6 +27,9 @@ export default function Register() {
 
   return (
     <div className={styles.page}>
+      <div className={styles.themeToggleWrap}>
+        <ThemeToggle />
+      </div>
       <div className={styles.card}>
         <div className={styles.logo}>🎯 PMCIS</div>
         <h1 className={styles.title}>Create account</h1>
