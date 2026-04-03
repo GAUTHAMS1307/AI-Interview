@@ -157,12 +157,12 @@ const saveQuestionScore = async (req, res) => {
     const normalizedDS = answered ? (wrongOrOffTopic ? Math.min(coherenceScore, WRONG_ANSWER_MAX_SCORE) : coherenceScore) : 0;
     const normalizedSuggestions = Array.isArray(suggestions) ? suggestions.filter(Boolean).map(String) : [];
     if (!answered) {
-      normalizedSuggestions.unshift("No meaningful answer detected. Give a direct response with at least 2-3 clear points.");
       normalizedSuggestions.unshift("You skipped this question. Practice a short structured response instead of leaving it blank.");
+      normalizedSuggestions.unshift("No meaningful answer detected. Give a direct response with at least 2-3 clear points.");
     }
     if (wrongOrOffTopic) {
-      normalizedSuggestions.unshift("Answer seems off-topic or incorrect. Focus directly on the question asked.");
       normalizedSuggestions.unshift("Start with a direct answer first, then add a brief example to prove your point.");
+      normalizedSuggestions.unshift("Answer seems off-topic or incorrect. Focus directly on the question asked.");
     }
 
     // Compute CIS for this question
