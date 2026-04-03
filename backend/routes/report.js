@@ -1,14 +1,17 @@
 // routes/report.js
 const express = require("express");
 const router  = express.Router();
-const { getReport, getProgressHistory } =
+const { getReport, getProgressHistory, getLastFiveComparison } =
   require("../controllers/reportController");
 const { protect } = require("../middleware/authMiddleware");
 
-// GET /api/report/:sessionId    — full report for one session
-router.get("/:sessionId",       protect, getReport);
-
 // GET /api/report/progress/all  — CIS trend across all sessions
 router.get("/progress/all",     protect, getProgressHistory);
+
+// GET /api/report/compare/last5 — last 5 completed sessions
+router.get("/compare/last5",    protect, getLastFiveComparison);
+
+// GET /api/report/:sessionId    — full report for one session
+router.get("/:sessionId",       protect, getReport);
 
 module.exports = router;

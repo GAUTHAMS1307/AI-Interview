@@ -136,6 +136,22 @@
   display:flex; justify-content:space-between; align-items:flex-start;
   margin-bottom:24px;
 }
+.headerRight {
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:10px;
+}
+.printBtn {
+  background:#2a2d3e;
+  border:1px solid #3d4166;
+  color:#e2e8f0;
+  border-radius:8px;
+  padding:8px 12px;
+  font-size:12px;
+  cursor:pointer;
+}
+.printBtn:hover { border-color:#4f46e5; color:#818cf8; }
 .bigCIS { text-align:center; }
 .bigScore { font-size:56px; font-weight:800; color:#4f46e5; line-height:1; }
 .bigGrade {
@@ -183,3 +199,18 @@
 .devHigh { color:#fc8181 !important; font-size:11px !important; }
 .qSuggestions { display:flex; flex-direction:column; gap:6px; }
 .qSug { font-size:12px; color:#a0aec0; background:#2a2d3e; padding:7px 12px; border-radius:6px; }
+
+@media print {
+  .nav, .tabs, .backBtn, .printBtn {
+    display: none !important;
+  }
+  .page, .content {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .chartCard, .kpiCard, .qCard, .historyCard, .suggestCard {
+    border: 1px solid #ddd !important;
+    background: #fff !important;
+    page-break-inside: avoid;
+  }
+}
