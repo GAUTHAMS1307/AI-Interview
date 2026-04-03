@@ -13,6 +13,7 @@ const MIN_RELEVANCE_THRESHOLD = 0.35;
 const MIN_COHERENCE_THRESHOLD = 0.35;
 const MIN_KEYWORD_OVERLAP = 0.1;
 const WRONG_ANSWER_MAX_SCORE = 0.2;
+const WRONG_ANSWER_COMMUNICATION_MAX = 0.3;
 const SKIP_ANSWER_PATTERN =
   /(?:\bi\s*(?:do\s*not|don't)\s*know\b|\bno\s+idea\b|\bnot\s+sure\b|\bcan(?:not|'t)\s+answer\b|\bskip\b)/i;
 const STOP_WORDS = new Set([
@@ -130,8 +131,12 @@ const saveQuestionScore = async (req, res) => {
       looksLikeSkipAnswer(transcript)
     );
 
-    const normalizedECS = answered ? clampScore(ECS) : 0;
-    const normalizedVSS = answered ? clampScore(VSS) : 0;
+    const normalizedECS = answered
+      ? (wrongOrOffTopic ? Math.min(clampScore(ECS), WRONG_ANSWER_COMMUNICATION_MAX) : clampScore(ECS))
+      : 0;
+    const normalizedVSS = answered
+      ? (wrongOrOffTopic ? Math.min(clampScore(VSS), WRONG_ANSWER_COMMUNICATION_MAX) : clampScore(VSS))
+      : 0;
     let normalizedAQS = 0;
     if (answered) {
       normalizedAQS = clampScore(AQS);
@@ -139,14 +144,25 @@ const saveQuestionScore = async (req, res) => {
         normalizedAQS = Math.min(normalizedAQS, WRONG_ANSWER_MAX_SCORE);
       }
     }
-    const normalizedECS2 = answered ? clampScore(ECS2) : 0;
-    const normalizedGS = answered ? clampScore(GS) : 0;
+    const normalizedECS2 = answered
+      ? (wrongOrOffTopic ? Math.min(clampScore(ECS2), WRONG_ANSWER_COMMUNICATION_MAX) : clampScore(ECS2))
+      : 0;
+    const normalizedGS = answered
+      ? (wrongOrOffTopic ? Math.min(clampScore(GS), WRONG_ANSWER_MAX_SCORE) : clampScore(GS))
+      : 0;
     const normalizedRS = answered ? (wrongOrOffTopic ? Math.min(relevanceScore, WRONG_ANSWER_MAX_SCORE) : relevanceScore) : 0;
-    const normalizedFS = answered ? clampScore(FS) : 0;
+    const normalizedFS = answered
+      ? (wrongOrOffTopic ? Math.min(clampScore(FS), WRONG_ANSWER_MAX_SCORE) : clampScore(FS))
+      : 0;
     const normalizedDS = answered ? (wrongOrOffTopic ? Math.min(coherenceScore, WRONG_ANSWER_MAX_SCORE) : coherenceScore) : 0;
     const normalizedSuggestions = Array.isArray(suggestions) ? suggestions.filter(Boolean).map(String) : [];
+    if (!answered) {
+      normalizedSuggestions.unshift("No meaningful answer detected. Give a direct response with at least 2-3 clear points.");
+      normalizedSuggestions.unshift("You skipped this question. Practice a short structured response instead of leaving it blank.");
+    }
     if (wrongOrOffTopic) {
       normalizedSuggestions.unshift("Answer seems off-topic or incorrect. Focus directly on the question asked.");
+      normalizedSuggestions.unshift("Start with a direct answer first, then add a brief example to prove your point.");
     }
 
     // Compute CIS for this question
@@ -176,7 +192,7 @@ const saveQuestionScore = async (req, res) => {
       RS: normalizedRS,
       FS: normalizedFS,
       DS: normalizedDS,
-      dominant_emotion, suggestions,
+      dominant_emotion, suggestions: normalizedSuggestions,
       duration_sec: Number(duration_sec) || 0,
       answeredAt: new Date()
     };
