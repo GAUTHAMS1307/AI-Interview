@@ -430,6 +430,37 @@ curl http://localhost:4000/api/health
 
 ---
 
+## ☁️ Deployment (Vercel + Render)
+
+### Frontend (Vercel)
+- Root directory: `frontend`
+- Build command: `npm run build`
+- Output directory: `build`
+- Environment variables:
+  - `REACT_APP_API_URL=https://<your-render-backend>.onrender.com`
+  - `REACT_APP_SOCKET_URL=https://<your-render-backend>.onrender.com`
+
+### Backend (Render Web Service)
+- Root directory: `backend`
+- Build command: `npm install`
+- Start command: `npm start`
+- Environment variables:
+  - `PORT=10000` (or Render default)
+  - `MONGO_URI=<your-mongodb-uri>`
+  - `JWT_SECRET=<strong-secret>`
+  - `JWT_EXPIRES_IN=7d`
+  - `ML_SERVER_URL=<your-ml-server-url>`
+  - `FRONTEND_URL=https://<your-vercel-app>.vercel.app`
+    - For multiple domains, use comma-separated values
+    - Example: `FRONTEND_URL=https://app.vercel.app,https://www.app.com`
+
+### Notes
+- Frontend now uses `REACT_APP_API_URL` for REST calls and `REACT_APP_SOCKET_URL` for Socket.io.
+- Frontend no longer calls ML server directly; interview NLP/eye analysis is proxied by backend via `/api/session/analyze`.
+- `frontend/vercel.json` enables SPA routing on Vercel.
+
+---
+
 ## 📱 Usage
 
 ### First Time Setup

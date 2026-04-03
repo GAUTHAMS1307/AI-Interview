@@ -12,6 +12,7 @@ import styles from "./Interview.module.css";
 
 const FRAME_RATE_MS   = 1500;   // emit frame every 1.5s during interview
 const ANSWER_TIME_SEC = 120;    // 2 min max per question
+const SOCKET_URL = (process.env.REACT_APP_SOCKET_URL || "").trim();
 
 export default function InterviewModule() {
   const navigate      = useNavigate();
@@ -61,7 +62,7 @@ export default function InterviewModule() {
       setQuestions(sRes.data.questions);
 
       // Connect socket.io
-      socketRef.current = io("http://localhost:4000");
+      socketRef.current = SOCKET_URL ? io(SOCKET_URL) : io();
       socketRef.current.on("emotion_result", (data) => {
         setLiveEmotion(data);
         if (data.ECS != null)       scoresRef.current.ECS.push(data.ECS);
@@ -120,22 +121,17 @@ export default function InterviewModule() {
       // Stop audio, get base64
       const audioB64 = await recorderRef.current.stop();
 
-      // Call NLP endpoint directly
+      // Call backend proxy endpoint for NLP + Eye scoring
       const axios = (await import("axios")).default;
       const q = questions[currentQ];
-      const nlpRes = await axios.post("http://localhost:5001/api/ml/nlp", {
+      const analysisRes = await axios.post("/api/session/analyze", {
         audio:       audioB64,
+        frame:       captureFrame(videoRef.current),
         question:    q.text,
-        baseline_stt: baseline?.stt
-      });
-      const nlp = nlpRes.data;
-
-      // Call eye endpoint for accumulated gaze
-      const eyeRes = await axios.post("http://localhost:5001/api/ml/eye", {
-        frame:         captureFrame(videoRef.current),
+        baseline_stt: baseline?.stt,
         baseline_gaze: baseline?.eye?.baseline_gaze_ratio || 0.75
       });
-      const eyeData = eyeRes.data;
+      const { nlp, eye: eyeData } = analysisRes.data;
 
       // Average accumulated live scores
       const avg = (arr) => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0.5;
