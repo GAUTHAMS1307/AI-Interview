@@ -62,8 +62,48 @@ const openAIChatJson = async ({ messages, model = OPENAI_MODEL_TEXT, temperature
   return parsed;
 };
 
-const defaultQuestions = (role = "general", count = 6) => {
+const resolveDifficultyValue = (difficulty = "mixed", idx = 0) => {
+  const mode = String(difficulty || "mixed").toLowerCase();
+  if (mode === "easy") return 1;
+  if (mode === "medium") return 2;
+  if (mode === "hard") return 3;
+  return 1 + (idx % 3);
+};
+
+const defaultQuestions = (role = "general", count = 6, difficulty = "mixed") => {
   const bank = {
+    frontend: [
+      "Explain React state management trade-offs between Context and Redux.",
+      "How do you optimize Largest Contentful Paint on a React page?",
+      "Describe how you prevent XSS in a frontend application.",
+      "What causes unnecessary re-renders and how do you fix them?",
+      "How would you design accessible form validation UX?",
+      "How do you handle API retries and loading/error states?"
+    ],
+    ml: [
+      "How do you handle class imbalance in a classification task?",
+      "How do you detect and respond to model drift in production?",
+      "Explain precision-recall trade-offs with a real scenario.",
+      "How do you choose features for a small tabular dataset?",
+      "How would you design an online model monitoring dashboard?",
+      "Describe bias risks in model training and mitigation steps."
+    ],
+    core_cs: [
+      "When would you choose a hash map over a balanced tree?",
+      "Explain CAP theorem with a practical system example.",
+      "How do indexing strategies affect database write performance?",
+      "Compare process and thread models for backend services.",
+      "What are common cache invalidation strategies and trade-offs?",
+      "How would you diagnose a memory leak in a long-running service?"
+    ],
+    hr: [
+      "Tell me about a conflict you resolved within a team.",
+      "Describe a time you received critical feedback and acted on it.",
+      "How do you prioritize work under tight deadlines?",
+      "Why do you want this role, and what value will you add?",
+      "Tell me about a project failure and what you learned.",
+      "How do you collaborate with cross-functional stakeholders?"
+    ],
     software_engineer: [
       "Explain a time you optimized system performance.",
       "How do you debug a production issue under pressure?",
@@ -102,7 +142,7 @@ const defaultQuestions = (role = "general", count = 6) => {
     id: `q_${idx + 1}`,
     text,
     category: role === "general" ? "behavioral" : "role_specific",
-    difficulty: 1 + (idx % 3)
+    difficulty: resolveDifficultyValue(difficulty, idx)
   }));
 };
 
@@ -147,7 +187,7 @@ const settledSuccessful = (results = []) =>
     .filter((r) => r.status === "fulfilled" && r.value)
     .map((r) => r.value);
 
-const generateQuestions = async ({ role = "general", count = 6 }) => {
+const generateQuestions = async ({ role = "general", count = 6, difficulty = "mixed" }) => {
   try {
     const json = await openAIChatJson({
       model: OPENAI_MODEL_TEXT,
@@ -160,22 +200,22 @@ const generateQuestions = async ({ role = "general", count = 6 }) => {
         },
         {
           role: "user",
-          content: `Role: ${role}. Count: ${count}.`
+          content: `Role: ${role}. Count: ${count}. Difficulty mode: ${difficulty}.`
         }
       ]
     });
     const questions = Array.isArray(json.questions) ? json.questions : [];
-    if (!questions.length) return { questions: defaultQuestions(role, count) };
+    if (!questions.length) return { questions: defaultQuestions(role, count, difficulty) };
     return {
       questions: questions.slice(0, count).map((q, idx) => ({
         id: String(q.id || `q_${idx + 1}`),
-        text: String(q.text || defaultQuestions(role, count)[idx]?.text || "Tell me about yourself."),
+        text: String(q.text || defaultQuestions(role, count, difficulty)[idx]?.text || "Tell me about yourself."),
         category: String(q.category || "behavioral"),
-        difficulty: clamp(Number(q.difficulty) || 2, 1, 3)
+        difficulty: resolveDifficultyValue(difficulty, idx)
       }))
     };
   } catch {
-    return { questions: defaultQuestions(role, count) };
+    return { questions: defaultQuestions(role, count, difficulty) };
   }
 };
 
