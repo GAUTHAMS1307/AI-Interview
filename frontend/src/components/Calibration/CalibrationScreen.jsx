@@ -139,7 +139,7 @@ export default function CalibrationScreen() {
 
   return (
     <div className={styles.page}>
-      <div style={{ position: "absolute", top: 20, right: 20 }}>
+      <div className={styles.themeToggleWrap}>
         <ThemeToggle />
       </div>
       {/* ── INTRO ── */}

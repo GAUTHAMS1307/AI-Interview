@@ -69,8 +69,10 @@ export default function InterviewModule() {
       if (difficultyFeatureEnabled) payload.difficulty = difficulty;
       const sRes = await apiStartSession(payload);
       const sessionQuestions = Array.isArray(sRes?.data?.questions) ? sRes.data.questions : [];
+      const baselineData = bRes?.data?.baseline || sRes?.data?.baseline || null;
       setSessionId(sRes.data.sessionId);
       setQuestions(sessionQuestions);
+      setBaseline(baselineData);
       if (sessionQuestions.length === 0) {
         throw new Error("No questions returned. Please try again.");
       }
@@ -89,7 +91,7 @@ export default function InterviewModule() {
       });
 
       setPhase("question");
-      startQuestion(0, bRes.data.baseline);
+      startQuestion(0, baselineData);
     } catch (err) {
       setError(err.response?.data?.message || err.message);
     }
@@ -250,7 +252,7 @@ export default function InterviewModule() {
 
   return (
     <div className={styles.page}>
-      <div style={{ position: "absolute", top: 20, right: 20, zIndex: 20 }}>
+      <div className={styles.themeToggleWrap}>
         <ThemeToggle />
       </div>
 

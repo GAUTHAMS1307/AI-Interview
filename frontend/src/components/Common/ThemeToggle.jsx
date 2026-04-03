@@ -1,5 +1,6 @@
 import React from "react";
 import { useTheme } from "../../context/ThemeContext";
+import styles from "./ThemeToggle.module.css";
 
 export default function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();
@@ -8,15 +9,7 @@ export default function ThemeToggle() {
     <button
       type="button"
       onClick={toggleTheme}
-      style={{
-        background: "var(--card-bg)",
-        border: "1px solid var(--border-color)",
-        color: "var(--text-secondary)",
-        padding: "7px 12px",
-        borderRadius: 8,
-        fontSize: 13,
-        cursor: "pointer"
-      }}
+      className={styles.toggleBtn}
       aria-label="Toggle light mode"
     >
       {theme === "dark" ? "☀️ Light" : "🌙 Dark"}

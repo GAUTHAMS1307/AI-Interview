@@ -1,5 +1,6 @@
 /* src/components/Interview/Interview.module.css */
 .page { min-height:100vh; background:var(--bg-page); display:flex; align-items:center; justify-content:center; padding:20px; position:relative; }
+.themeToggleWrap { position:absolute; top:20px; right:20px; z-index:20; }
 .setupCard {
   background:var(--card-bg); border:1px solid var(--border-color); border-radius:20px;
   padding:48px 40px; max-width:480px; width:100%; text-align:center;

@@ -150,7 +150,9 @@ export class AudioRecorder {
         if (typeof onChunk === "function") {
           blobToBase64(e.data)
             .then((b64) => onChunk(b64))
-            .catch(() => {});
+            .catch((err) => {
+              console.warn("[AudioRecorder] Failed to convert audio chunk:", err?.message || err);
+            });
         }
       }
     };

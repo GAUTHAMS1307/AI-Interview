@@ -8,6 +8,12 @@
   padding: 20px;
   position: relative;
 }
+.themeToggleWrap {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 20;
+}
 .card {
   background: var(--card-bg);
   border: 1px solid var(--border-color);
