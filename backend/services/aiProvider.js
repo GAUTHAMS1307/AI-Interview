@@ -6,9 +6,17 @@ const OPENAI_MODEL_VISION = process.env.OPENAI_MODEL_VISION || OPENAI_MODEL_TEXT
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
 const OPENAI_TIMEOUT_MS = Number(process.env.OPENAI_TIMEOUT_MS || 45000);
 const OPENAI_TEMPERATURE = Number(process.env.OPENAI_TEMPERATURE || 0.2);
+const MIN_USABLE_AUDIO_BASE64_LENGTH = 256;
 
 const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
 const round = (n, d = 3) => Number(Number(n || 0).toFixed(d));
+const countWords = (text = "") => String(text).trim().split(/\s+/).filter(Boolean).length;
+const hasUsableAudioInput = (audio) => {
+  const raw = String(audio || "").trim();
+  if (!raw) return false;
+  const base64Payload = raw.includes(",") ? raw.split(",").pop() : raw;
+  return base64Payload.replace(/\s/g, "").length >= MIN_USABLE_AUDIO_BASE64_LENGTH;
+};
 
 const extractJsonObject = (raw) => {
   if (!raw || typeof raw !== "string") return null;
@@ -232,6 +240,19 @@ const generateQuestions = async ({ role = "general", count = 6, difficulty = "mi
 const analyzeNlpAnswer = async ({ audio, question, baseline_stt }) => {
   const baseWpm = Number(baseline_stt?.baseline_wpm || 130);
   const keyConfigured = openAIEnabled();
+  const noAnswerFallback = {
+    transcript: "",
+    wpm: 0,
+    filler_count: 0,
+    pause_count: 0,
+    GS: 0,
+    RS: 0,
+    FS: 0,
+    DS: 0,
+    AQS: 0,
+    deviation_pct: 100,
+    suggestions: ["No verbal answer detected. Please speak your response before submitting."]
+  };
   const fallback = {
     transcript: keyConfigured
       ? "Audio analysis unavailable due to provider error. Using fallback scoring."
@@ -239,16 +260,20 @@ const analyzeNlpAnswer = async ({ audio, question, baseline_stt }) => {
     wpm: baseWpm,
     filler_count: 0,
     pause_count: 0,
-    GS: 0.6,
-    RS: 0.6,
-    FS: 0.7,
-    DS: 0.6,
-    AQS: 0.62,
+    GS: 0,
+    RS: 0,
+    FS: 0,
+    DS: 0,
+    AQS: 0,
     deviation_pct: 0,
     suggestions: keyConfigured
       ? ["AI provider was temporarily unavailable; retry the analysis."]
       : ["Configure OPENAI_API_KEY to enable detailed NLP scoring."]
   };
+
+  if (!hasUsableAudioInput(audio)) {
+    return noAnswerFallback;
+  }
 
   try {
     const prompt = [
@@ -258,7 +283,7 @@ const analyzeNlpAnswer = async ({ audio, question, baseline_stt }) => {
       "GS, RS, FS, DS, AQS (all numbers 0-1), suggestions (array of short strings).",
       `Question asked: ${question || ""}`,
       `Speaker baseline WPM: ${baseWpm}.`,
-      "If audio content is not fully usable, infer reasonably from available signal and still return complete JSON."
+      "If no clear verbal response is present, set transcript to empty string and set GS, RS, FS, DS, AQS to 0."
     ].join(" ");
 
     const json = await openAIChatJson({
@@ -282,6 +307,11 @@ const analyzeNlpAnswer = async ({ audio, question, baseline_stt }) => {
       ]
     });
 
+    const transcript = String(json.transcript || "").trim();
+    if (countWords(transcript) < 3) {
+      return noAnswerFallback;
+    }
+
     const wpm = Number(json.wpm ?? baseWpm);
     const fillerCount = Number(json.filler_count ?? 0);
     const pauseCount = Number(json.pause_count ?? 0);
@@ -289,7 +319,7 @@ const analyzeNlpAnswer = async ({ audio, question, baseline_stt }) => {
     const deviation = clamp(Math.abs(((wpm - baseWpm) / Math.max(baseWpm, 1)) * 100), 0, 100);
 
     return {
-      transcript: String(json.transcript || ""),
+      transcript,
       wpm: round(wpm, 1),
       filler_count: fillerCount,
       pause_count: pauseCount,
