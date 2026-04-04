@@ -269,7 +269,7 @@ const getSessions = async (req, res) => {
     })
       .select("role scores startedAt completedAt duration_min")
       .sort({ startedAt: -1 })
-      .limit(20);
+      .limit(50);
 
     res.json({ sessions });
   } catch (err) {
