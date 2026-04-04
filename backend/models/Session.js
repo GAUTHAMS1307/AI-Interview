@@ -79,4 +79,8 @@ const SessionSchema = new mongoose.Schema({
   duration_min: { type: Number, default: 0 }
 });
 
+// Compound index for the most common query pattern:
+// find completed sessions for a user, sorted by date
+SessionSchema.index({ userId: 1, status: 1, startedAt: -1 });
+
 module.exports = mongoose.model("Session", SessionSchema);
